@@ -1,0 +1,228 @@
+/* src/ui/index.css */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    margin: 0;
+    background-color: #f9f9fb;
+  }
+  
+  .app-container {
+    width: 450px;
+    padding: 0 16px 16px;
+  }
+  
+  header {
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 8px;
+    margin-bottom: 16px;
+  }
+  
+  h1 {
+    font-size: 20px;
+    color: #1f1f1f;
+    margin: 16px 0 0;
+  }
+  
+  .tab-list {
+    display: flex;
+    border-bottom: 1px solid #ccc;
+    margin-bottom: 16px;
+  }
+  
+  .tab-list button {
+    padding: 10px 16px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    color: #5f6368;
+    border-bottom: 2px solid transparent;
+  }
+  
+  .tab-list button.active {
+    color: #1a73e8;
+    border-bottom-color: #1a73e8;
+  }
+  
+  .form-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .form-group {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .form-group label {
+    font-weight: 600;
+    margin-bottom: 6px;
+    font-size: 14px;
+  }
+  
+  .form-group .description {
+    font-size: 12px;
+    color: #5f6368;
+    margin: 4px 0 0;
+  }
+  
+  .save-button {
+    background-color: #1a73e8;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    align-self: flex-start;
+  }
+  
+  .save-button:hover {
+    background-color: #185abc;
+  }
+  
+  .status-message {
+    color: green;
+    font-size: 13px;
+    margin-top: 8px;
+  }
+
+  /* src/ui/index.css */
+
+/* --- Rules Panel Styles --- */
+
+h4 {
+    margin-top: 24px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid #e0e0e0;
+    padding-bottom: 4px;
+  }
+  
+  .rule-list {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .rule-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px;
+    border-radius: 4px;
+    margin-bottom: 4px;
+  }
+  
+  .rule-list li:hover {
+    background-color: #f1f3f4;
+  }
+  
+  .rule-list li.disabled .rule-content {
+    color: #9e9e9e;
+    text-decoration: line-through;
+  }
+  
+  .rule-content {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Courier New', Courier, monospace;
+  }
+  
+  .rule-actions button {
+    background: none;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+    margin-left: 8px;
+  }
+  
+  .rule-actions button.delete-btn {
+    border-color: #d93025;
+    color: #d93025;
+  }
+  
+  .no-rules-message {
+    color: #5f6368;
+    padding: 8px;
+    font-style: italic;
+  }
+  
+  .add-rule-form {
+    margin-bottom: 24px;
+    background-color: #f1f3f4;
+    padding: 12px;
+    border-radius: 8px;
+  }
+  
+  .add-rule-form h3 {
+    margin-top: 0;
+    margin-bottom: 12px;
+    font-size: 16px;
+  }
+  
+  .add-rule-form .form-row {
+    display: flex;
+    gap: 8px;
+  }
+  
+  .add-rule-form input,
+  .add-rule-form select {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  .add-rule-form button {
+    background-color: #1a73e8;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+
+  /* src/ui/index.css */
+
+/* --- Reorder Button Styles --- */
+
+.rule-actions button.reorder-btn {
+  font-weight: bold;
+  font-size: 16px;
+  padding: 0px 8px; /* Adjust padding for arrows */
+  line-height: 1;
+}
+
+.rule-actions button:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+/* src/ui/index.css */
+
+/* --- Data Management Styles --- */
+.data-management {
+  display: flex;
+  gap: 8px;
+  margin-top: 24px;
+  margin-bottom: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.data-management button {
+  background-color: #f1f3f4;
+  color: #3c4043;
+  border: 1px solid #dadce0;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.data-management button:hover {
+  background-color: #e8eaed;
+}
