@@ -7,7 +7,7 @@ interface TabProps {
 }
 
 export const Tab: React.FC<TabProps> = ({ children }) => {
-  return <div>{children}</div>;
+  return <>{children}</>;
 };
 
 interface TabsProps {
@@ -19,10 +19,14 @@ export const Tabs: React.FC<TabsProps> = ({ children }) => {
 
   return (
     <div>
-      <div className="tab-list">
+      <div className="tab-list" role="tablist" aria-label="Configuration tabs">
         {children.map((child, index) => (
           <button
             key={index}
+            role="tab"
+            id={`tab-${index}`}
+            aria-selected={index === activeTab}
+            aria-controls={`tabpanel-${index}`}
             className={index === activeTab ? 'active' : ''}
             onClick={() => setActiveTab(index)}
           >
@@ -30,7 +34,12 @@ export const Tabs: React.FC<TabsProps> = ({ children }) => {
           </button>
         ))}
       </div>
-      <div className="tab-content">
+      <div 
+        id={`tabpanel-${activeTab}`}
+        role="tabpanel" 
+        aria-labelledby={`tab-${activeTab}`}
+        className="tab-content"
+      >
         {children[activeTab]}
       </div>
     </div>

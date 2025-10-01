@@ -1,0 +1,56 @@
+AIRedactX Extension Style Guide
+
+--- LAYOUT ---
+- Grid: 8px base unit
+- Section padding: 24px top/bottom, 16px sides
+- Row height: 48px
+- Input/button padding: 12px vertical, 16px horizontal
+- Minimum interactive target: 44px
+
+--- TYPOGRAPHY ---
+- Font family: System sans-serif
+  - macOS: SF Pro
+  - Windows: Segoe UI
+  - Linux: Ubuntu/Cantarell
+- Heading 1 (App Title): 24px, semibold, #212121
+- Heading 2 (Section Titles): 18px, semibold, #212121
+- Body text: 14–16px, regular, #212121
+- Secondary text: 14px, #616161
+- Disabled text: 14px, #9E9E9E
+
+--- COLORS ---
+- Background: #FAFAFA
+- Card/table: #FFFFFF
+- Divider: #E0E0E0
+- Primary accent: #0060DF
+- Hover state: rgba(0,0,0,0.04)
+- Focus outline: 2px solid #0060DF
+- Error: #D32F2F (text + border)
+
+--- COMPONENTS ---
+Buttons:
+- Height: 40–44px
+- Primary: background #0060DF, text #FFFFFF
+- Secondary: transparent background, border #E0E0E0
+- Hover: darken background 10%
+
+Inputs:
+- Height: 40px
+- Border: 1px solid #E0E0E0
+- Focus: border 2px solid #0060DF, outline none
+
+Tables:
+- Row background: #FFFFFF
+- Zebra striping: alternate row #F9F9F9
+- Hover: background rgba(0,0,0,0.04)
+
+Toggles:
+- Role: switch, aria-checked true/false
+- ON: #0060DF track, white thumb
+- OFF: #E0E0E0 track, gray thumb
+- Label: Enabled / Disabled text beside switch
+
+Alerts:
+- Success: #0060DF text + light blue background
+- Error: #D32F2F text + light red background
+- Snackbar: dark background #333, white text, action button #0060DF

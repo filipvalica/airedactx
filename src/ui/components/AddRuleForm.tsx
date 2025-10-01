@@ -13,9 +13,9 @@ export const AddRuleForm: React.FC<AddRuleFormProps> = ({ onAddRule }) => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (find.trim() && replace.trim()) {
+    if (find.trim()) {
       onAddRule({ find, replace, type });
-      // Reset form
+      // Reset form for the next entry
       setFind('');
       setReplace('');
     }
@@ -23,28 +23,37 @@ export const AddRuleForm: React.FC<AddRuleFormProps> = ({ onAddRule }) => {
 
   return (
     <form onSubmit={handleSubmit} className="add-rule-form">
-      <h3>Add New Rule</h3>
-      <div className="form-row">
-        <select value={type} onChange={(e) => setType(e.target.value as any)}>
+      <div className="form-group" style={{ flexBasis: '120px', flexGrow: 0 }}>
+        <label htmlFor="rule-type">Type</label>
+        <select id="rule-type" value={type} onChange={(e) => setType(e.target.value as 'literal' | 'regex')}>
           <option value="literal">Literal</option>
           <option value="regex">Regex</option>
         </select>
+      </div>
+      <div className="form-group" style={{ flexBasis: '30%' }}>
+        <label htmlFor="rule-find">Match Pattern</label>
         <input
+          id="rule-find"
           type="text"
-          placeholder="Find..."
+          placeholder="John Doe"
           value={find}
           onChange={(e) => setFind(e.target.value)}
           required
         />
+      </div>
+      <div className="form-group" style={{ flexBasis: '30%' }}>
+        <label htmlFor="rule-replace">Replacement Text</label>
         <input
+          id="rule-replace"
           type="text"
-          placeholder="Replace with..."
+          placeholder="REDACTED_NAME"
           value={replace}
           onChange={(e) => setReplace(e.target.value)}
-          required
         />
-        <button type="submit">Add</button>
       </div>
+      <button type="submit" className="add-btn">
+      ➕
+      </button>
     </form>
   );
 };

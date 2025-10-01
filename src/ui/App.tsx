@@ -6,52 +6,64 @@ import { RuleList } from './components/RuleList';
 import { AddRuleForm } from './components/AddRuleForm';
 import { getRules, saveRules } from '../storage/storageManager';
 import { RedactionRule } from '../types';
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
+import { arrayMove, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+
+// This is a new component to contain the form and manage buttons
+const RulesControlPanel = ({ onAddRule, onImport, onExport }: any) => (
+  <div className="control-panel-container">
+    <AddRuleForm onAddRule={onAddRule} />
+    <div className="manage-rules-section">
+      <div className="data-management">
+        <button onClick={onImport}>Import Rules</button>
+        <button onClick={onExport}>Export Rules</button>
+      </div>
+    </div>
+  </div>
+);
+
 
 function RulesPanel() {
   const [rules, setRules] = useState<RedactionRule[]>([]);
+  const [recentlyDeleted, setRecentlyDeleted] = useState<{rule: RedactionRule, index: number} | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const undoTimeoutRef = useRef<number | null>(null);
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
   useEffect(() => {
-    const loadRules = async () => {
-      setRules(await getRules());
-    };
+    const loadRules = async () => setRules(await getRules());
     loadRules();
+    return () => {
+      if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+    };
   }, []);
-
+  
+  const handleDragEnd = async (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      const oldIndex = rules.findIndex((r) => r.id === active.id);
+      const newIndex = rules.findIndex((r) => r.id === over.id);
+      if (rules[oldIndex].type === rules[newIndex].type) {
+        const updatedRules = arrayMove(rules, oldIndex, newIndex);
+        setRules(updatedRules);
+        await saveRules(updatedRules);
+      }
+    }
+  };
+  
   const handleAddRule = async (newRule: Omit<RedactionRule, 'id' | 'enabled'>) => {
     const ruleToAdd: RedactionRule = { ...newRule, id: `rule-${Date.now()}`, enabled: true };
     const updatedRules = [...rules, ruleToAdd];
     setRules(updatedRules);
     await saveRules(updatedRules);
   };
-
-  const handleDeleteRule = async (id: string) => {
-    const updatedRules = rules.filter((rule) => rule.id !== id);
-    setRules(updatedRules);
-    await saveRules(updatedRules);
-  };
-
+  
   const handleToggleRule = async (id: string) => {
     const updatedRules = rules.map((rule) => (rule.id === id ? { ...rule, enabled: !rule.enabled } : rule));
     setRules(updatedRules);
     await saveRules(updatedRules);
   };
-
-  const handleReorderRule = async (id: string, direction: 'up' | 'down') => {
-    const index = rules.findIndex((rule) => rule.id === id);
-    if (index === -1) return;
-
-    const newRules = [...rules];
-    const item = newRules.splice(index, 1)[0];
-    const newIndex = direction === 'up' ? index - 1 : index + 1;
-
-    if (newIndex >= 0 && newIndex <= rules.length) {
-      newRules.splice(newIndex, 0, item);
-      setRules(newRules);
-      await saveRules(newRules);
-    }
-  };
-
+  
   const handleExportRules = () => {
     const header = "type,find,replace\n";
     const csvRows = rules.map(rule => {
@@ -68,196 +80,126 @@ function RulesPanel() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(url);
   };
+  
+  const handleFileSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
 
-  const readFileAsText = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      
-      reader.onload = (e) => {
-        const text = e.target?.result;
-        if (typeof text === 'string') {
-          resolve(text);
-        } else {
-          reject(new Error('Failed to read file as text'));
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const text = e.target?.result as string;
+      try {
+        const importedRules = validateAndParseCSV(text);
+        if (window.confirm(`Found ${importedRules.length} rules. Importing will overwrite all existing rules. Continue?`)) {
+          setRules(importedRules);
+          await saveRules(importedRules);
+          alert("Rules imported successfully!");
         }
-      };
-      
-      reader.onerror = () => {
-        reject(new Error('FileReader error occurred'));
-      };
-      
-      reader.readAsText(file, 'UTF-8');
-    });
-  };
-
-  const validateAndParseCSV = (csvText: string): RedactionRule[] => {
-    console.log("Starting CSV validation...");
-    const lines = csvText.replace(/^\uFEFF/, '').trim().split(/\r?\n/);
-    
-    if (lines.length === 0) {
-      throw new Error("CSV file is empty.");
-    }
-    
-    const header = lines.shift()?.trim().toLowerCase();
-    console.log("Header:", header);
-    
-    if (header !== 'type,find,replace') {
-      throw new Error(`Invalid CSV header. Expected 'type,find,replace' but got '${header}'.`);
-    }
-
-    const rules: RedactionRule[] = [];
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim();
-      if (line === '') continue;
-
-      console.log(`Processing line ${i + 2}:`, line);
-
-      // Improved CSV parsing that handles quoted fields with commas
-      const parts: string[] = [];
-      let current = '';
-      let insideQuotes = false;
-      
-      for (let j = 0; j < line.length; j++) {
-        const char = line[j];
-        
-        if (char === '"') {
-          if (insideQuotes && line[j + 1] === '"') {
-            current += '"';
-            j++;
-          } else {
-            insideQuotes = !insideQuotes;
-          }
-        } else if (char === ',' && !insideQuotes) {
-          parts.push(current);
-          current = '';
-        } else {
-          current += char;
-        }
+      } catch (error) {
+        alert(`Import failed: ${(error as Error).message}`);
       }
-      parts.push(current);
-
-      console.log(`Parsed parts:`, parts);
-
-      if (parts.length !== 3) {
-        throw new Error(`Row ${i + 2}: Expected 3 columns but found ${parts.length}.`);
-      }
-
-      const [type, find, replace] = parts.map(p => p.trim());
-
-      if (!type || !find || !replace) {
-        throw new Error(`Row ${i + 2}: All columns must have values.`);
-      }
-
-      if (type !== 'literal' && type !== 'regex') {
-        throw new Error(`Row ${i + 2}: Type must be 'literal' or 'regex', got '${type}'.`);
-      }
-
-      if (type === 'regex') {
-        try {
-          new RegExp(find);
-        } catch (e) {
-          throw new Error(`Row ${i + 2}: Invalid regex pattern '${find}'.`);
-        }
-      }
-
-      rules.push({
-        id: `imported-rule-${Date.now()}-${i}`,
-        type: type as 'literal' | 'regex',
-        find,
-        replace,
-        enabled: true
-      });
-    }
-
-    if (rules.length === 0) {
-      throw new Error("No valid rules found in CSV file.");
-    }
-
-    console.log("Validation complete, rules:", rules);
-    return rules;
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    console.log("File input changed - event fired!");
-    const file = e.target.files?.[0];
-    
-    if (!file) {
-      console.log("No file selected");
-      return;
-    }
-    
-    console.log("File selected:", file.name, file.size, "bytes");
-    
-    try {
-      const text = await readFileAsText(file);
-      console.log("File read successfully, length:", text.length);
-      console.log("First 200 chars:", text.substring(0, 200));
-      
-      const importedRules = validateAndParseCSV(text);
-      console.log("Parsed rules:", importedRules.length);
-      
-      const confirmed = window.confirm(
-        `Found ${importedRules.length} valid rule${importedRules.length !== 1 ? 's' : ''}.\n\n` +
-        `Importing will REPLACE all ${rules.length} existing rule${rules.length !== 1 ? 's' : ''}.\n\n` +
-        `Continue?`
-      );
-      
-      console.log("User confirmed:", confirmed);
-      
-      if (confirmed) {
-        console.log("Saving rules...");
-        setRules(importedRules);
-        await saveRules(importedRules);
-        console.log("Save complete");
-        alert(`Successfully imported ${importedRules.length} rule${importedRules.length !== 1 ? 's' : ''}!`);
-      }
-    } catch (error) {
-      console.error("Import error:", error);
-      alert(`Import failed:\n\n${(error as Error).message}`);
-    } finally {
-      // Reset the file input so same file can be selected again
       if (fileInputRef.current) {
-        fileInputRef.current.value = '';
+        fileInputRef.current.value = "";
+      }
+    };
+    reader.readAsText(file);
+  };
+  
+  const validateAndParseCSV = (csvText: string): RedactionRule[] => {
+    const lines = csvText.replace(/^\uFEFF/, '').trim().split(/\r?\n/);
+    const header = lines.shift()?.trim();
+    if (header !== 'type,find,replace') {
+      throw new Error("Invalid CSV header. Expected 'type,find,replace'.");
+    }
+
+    return lines.map((line, index) => {
+      if (line.trim() === '') return null;
+      const parts = line.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g) || [];
+      if (parts.length !== 3) {
+        throw new Error(`Row ${index + 1}: Each row must have exactly 3 columns.`);
+      }
+      const [type, find, replace] = parts.map(p => p.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+      if (type !== 'literal' && type !== 'regex') {
+        throw new Error(`Row ${index + 1}: Type must be 'literal' or 'regex'.`);
+      }
+      if (type === 'regex') {
+        try { new RegExp(find); } 
+        catch (e) { throw new Error(`Row ${index + 1}: Invalid Regex pattern in 'find' column.`); }
+      }
+      return { id: `imported-rule-${Date.now()}-${index}`, type: type as 'literal' | 'regex', find, replace, enabled: true };
+    }).filter((rule): rule is RedactionRule => rule !== null);
+  };
+
+  const handleDeleteRule = (id: string) => {
+    const ruleIndex = rules.findIndex(rule => rule.id === id);
+    if (ruleIndex === -1) return;
+
+    const ruleToDelete = rules[ruleIndex];
+    setRecentlyDeleted({ rule: ruleToDelete, index: ruleIndex });
+
+    const updatedRules = rules.filter(rule => rule.id !== id);
+    setRules(updatedRules);
+
+    if (undoTimeoutRef.current) {
+      clearTimeout(undoTimeoutRef.current);
+    }
+
+    undoTimeoutRef.current = window.setTimeout(async () => {
+      await saveRules(updatedRules);
+      setRecentlyDeleted(null);
+    }, 5000);
+  };
+
+  const handleUndoDelete = () => {
+    if (recentlyDeleted) {
+      const newRules = [...rules];
+      newRules.splice(recentlyDeleted.index, 0, recentlyDeleted.rule);
+      setRules(newRules);
+      setRecentlyDeleted(null);
+      if (undoTimeoutRef.current) {
+        clearTimeout(undoTimeoutRef.current);
       }
     }
   };
-
-  const handleImportClick = () => {
-    console.log("Import button clicked");
-    console.log("File input ref exists:", !!fileInputRef.current);
-    if (fileInputRef.current) {
-      console.log("Triggering file picker...");
-      fileInputRef.current.click();
-    } else {
-      console.error("File input ref is null!");
-    }
-  };
-
+  
   const literalRules = rules.filter((r) => r.type === 'literal');
   const regexRules = rules.filter((r) => r.type === 'regex');
 
   return (
-    <div>
-      <AddRuleForm onAddRule={handleAddRule} />
-      <div className="data-management">
-        <button onClick={handleExportRules}>Export Rules</button>
-        <button onClick={handleImportClick}>Import Rules</button>
-        <input 
-          type="file" 
-          ref={fileInputRef} 
-          style={{ display: 'none' }} 
-          accept=".csv" 
-          onChange={handleFileChange}
-        />
-      </div>
-      <h4>Literal Rules</h4>
-      <RuleList rules={literalRules} onDelete={handleDeleteRule} onToggle={handleToggleRule} onReorder={handleReorderRule} />
-      <h4>Regex Rules</h4>
-      <RuleList rules={regexRules} onDelete={handleDeleteRule} onToggle={handleToggleRule} onReorder={handleReorderRule} />
-    </div>
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+      <RulesControlPanel 
+        onAddRule={handleAddRule} 
+        onImport={() => fileInputRef.current?.click()}
+        onExport={handleExportRules}
+      />
+      <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".csv" onChange={handleFileSelected} />
+
+      {recentlyDeleted && (
+        <div className="undo-snackbar" role="alert">
+          <span>Rule deleted.</span>
+          <button onClick={handleUndoDelete}>Undo</button>
+        </div>
+      )}
+
+      <section aria-labelledby="literal-rules-heading">
+        <h4 id="literal-rules-heading">Literal Rules</h4>
+        {literalRules.length > 0 ? (
+          <SortableContext items={literalRules.map(r => r.id)} strategy={verticalListSortingStrategy}>
+            <RuleList rules={literalRules} onDelete={handleDeleteRule} onToggle={handleToggleRule} />
+          </SortableContext>
+        ) : <p className="no-rules-message">No literal rules have been added.</p>}
+      </section>
+      
+      <section aria-labelledby="regex-rules-heading">
+        <h4 id="regex-rules-heading">Regex Rules</h4>
+        {regexRules.length > 0 ? (
+        <SortableContext items={regexRules.map(r => r.id)} strategy={verticalListSortingStrategy}>
+          <RuleList rules={regexRules} onDelete={handleDeleteRule} onToggle={handleToggleRule} />
+        </SortableContext>
+        ) : <p className="no-rules-message">No regex rules have been added.</p>}
+      </section>
+    </DndContext>
   );
 }
 
@@ -265,7 +207,7 @@ function App() {
   return (
     <div className="app-container">
       <header><h1>AIRedactX</h1></header>
-      <main>
+      <main role="main">
         <Tabs>
           <Tab label="Rules"><RulesPanel /></Tab>
           <Tab label="Settings"><SettingsPanel /></Tab>
