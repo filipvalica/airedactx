@@ -13,12 +13,13 @@
     "<all_urls>"
   ],
   "background": {
-    "scripts": ["src/background/main.js"]
+    "scripts": ["background.js"],
+    "type": "module"
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["src/content/injector.js"]
+      "js": ["content.js"]
     }
   ],
   "action": {

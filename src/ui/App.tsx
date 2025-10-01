@@ -24,28 +24,34 @@ function RulesPanel() {
     setRules(updatedRules);
     await saveRules(updatedRules);
   };
+
   const handleDeleteRule = async (id: string) => {
     const updatedRules = rules.filter((rule) => rule.id !== id);
     setRules(updatedRules);
     await saveRules(updatedRules);
   };
+
   const handleToggleRule = async (id: string) => {
     const updatedRules = rules.map((rule) => (rule.id === id ? { ...rule, enabled: !rule.enabled } : rule));
     setRules(updatedRules);
     await saveRules(updatedRules);
   };
+
   const handleReorderRule = async (id: string, direction: 'up' | 'down') => {
     const index = rules.findIndex((rule) => rule.id === id);
     if (index === -1) return;
+
     const newRules = [...rules];
     const item = newRules.splice(index, 1)[0];
     const newIndex = direction === 'up' ? index - 1 : index + 1;
+
     if (newIndex >= 0 && newIndex <= rules.length) {
       newRules.splice(newIndex, 0, item);
       setRules(newRules);
       await saveRules(newRules);
     }
   };
+
   const handleExportRules = () => {
     const header = "type,find,replace\n";
     const csvRows = rules.map(rule => {
@@ -63,9 +69,13 @@ function RulesPanel() {
     link.click();
     document.body.removeChild(link);
   };
+
   const handleFileSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      return;
+    }
+
     const reader = new FileReader();
     reader.onload = async (e) => {
       const text = e.target?.result as string;
@@ -79,29 +89,41 @@ function RulesPanel() {
       } catch (error) {
         alert(`Import failed: ${(error as Error).message}`);
       }
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      // Reset the file input so the user can select the same file again
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
     };
     reader.readAsText(file);
   };
+
   const validateAndParseCSV = (csvText: string): RedactionRule[] => {
     const lines = csvText.replace(/^\uFEFF/, '').trim().split(/\r?\n/);
     const header = lines.shift()?.trim();
     if (header !== 'type,find,replace') {
       throw new Error("Invalid CSV header. Expected 'type,find,replace'.");
     }
+
     return lines.map((line, index) => {
       if (line.trim() === '') return null;
+
       const parts = line.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g) || [];
       if (parts.length !== 3) {
         throw new Error(`Row ${index + 1}: Each row must have exactly 3 columns.`);
       }
+
       const [type, find, replace] = parts.map(p => p.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+
       if (type !== 'literal' && type !== 'regex') {
         throw new Error(`Row ${index + 1}: Type must be 'literal' or 'regex'.`);
       }
+
       if (type === 'regex') {
-        try { new RegExp(find); } 
-        catch (e) { throw new Error(`Row ${index + 1}: Invalid Regex pattern in 'find' column.`); }
+        try {
+          new RegExp(find);
+        } catch (e) {
+          throw new Error(`Row ${index + 1}: Invalid Regex pattern in 'find' column.`);
+        }
       }
       return { id: `imported-rule-${Date.now()}-${index}`, type: type as 'literal' | 'regex', find, replace, enabled: true };
     }).filter(Boolean) as RedactionRule[];
@@ -116,7 +138,13 @@ function RulesPanel() {
       <div className="data-management">
         <button onClick={handleExportRules}>Export Rules</button>
         <button onClick={() => fileInputRef.current?.click()}>Import Rules</button>
-        <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".csv" onChange={handleFileSelected} />
+        <input 
+          type="file" 
+          ref={fileInputRef} 
+          style={{ display: 'none' }} 
+          accept=".csv" 
+          onChange={handleFileSelected} 
+        />
       </div>
       <h4>Literal Rules</h4>
       <RuleList rules={literalRules} onDelete={handleDeleteRule} onToggle={handleToggleRule} onReorder={handleReorderRule} />
