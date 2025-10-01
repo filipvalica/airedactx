@@ -13,12 +13,12 @@
     "<all_urls>"
   ],
   "background": {
-    "scripts": ["background/main.js"]
+    "scripts": ["src/background/main.js"]
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content/injector.js"]
+      "js": ["src/content/injector.js"]
     }
   ],
   "action": {
@@ -26,6 +26,9 @@
     "default_icon": {
       "48": "icons/icon-48.png"
     }
+  },
+  "icons": {
+    "48": "icons/icon-48.png"
   },
   "browser_specific_settings": {
     "gecko": {

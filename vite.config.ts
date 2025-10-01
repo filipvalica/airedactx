@@ -2,6 +2,10 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
+import { fileURLToPath, URL } from 'node:url';
+
+// Get the current directory for ES modules
+const __dirname = fileURLToPath(new URL('.', import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
@@ -15,12 +19,9 @@ export default defineConfig({
         'index': resolve(__dirname, 'index.html'),
       },
       output: {
-        entryFileNames: '[name].js',
-        chunkFileNames: 'chunks/[name].js',
-        assetFileNames: (assetInfo) => {
-          // Keep index.html at the root, move others to assets
-          return assetInfo.name === 'index.html' ? '[name].[ext]' : 'assets/[name].[ext]';
-        },
+        entryFileNames: 'src/[name].js',
+        chunkFileNames: 'assets/js/[name].js',
+        assetFileNames: 'assets/[name].[ext]',
       },
     },
   },
