@@ -68,65 +68,172 @@ function RulesPanel() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
-  const handleFileSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const text = e.target?.result as string;
-      try {
-        const importedRules = validateAndParseCSV(text);
-        if (window.confirm(`Found ${importedRules.length} rules. Importing will overwrite all existing rules. Continue?`)) {
-          setRules(importedRules);
-          await saveRules(importedRules);
-          alert("Rules imported successfully!");
+  const readFileAsText = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        const text = e.target?.result;
+        if (typeof text === 'string') {
+          resolve(text);
+        } else {
+          reject(new Error('Failed to read file as text'));
         }
-      } catch (error) {
-        alert(`Import failed: ${(error as Error).message}`);
-      }
-      // Reset the file input so the user can select the same file again
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    };
-    reader.readAsText(file);
+      };
+      
+      reader.onerror = () => {
+        reject(new Error('FileReader error occurred'));
+      };
+      
+      reader.readAsText(file, 'UTF-8');
+    });
   };
 
   const validateAndParseCSV = (csvText: string): RedactionRule[] => {
+    console.log("Starting CSV validation...");
     const lines = csvText.replace(/^\uFEFF/, '').trim().split(/\r?\n/);
-    const header = lines.shift()?.trim();
+    
+    if (lines.length === 0) {
+      throw new Error("CSV file is empty.");
+    }
+    
+    const header = lines.shift()?.trim().toLowerCase();
+    console.log("Header:", header);
+    
     if (header !== 'type,find,replace') {
-      throw new Error("Invalid CSV header. Expected 'type,find,replace'.");
+      throw new Error(`Invalid CSV header. Expected 'type,find,replace' but got '${header}'.`);
     }
 
-    return lines.map((line, index) => {
-      if (line.trim() === '') return null;
+    const rules: RedactionRule[] = [];
 
-      const parts = line.match(/(".*?"|[^",]+)(?=\s*,|\s*$)/g) || [];
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (line === '') continue;
+
+      console.log(`Processing line ${i + 2}:`, line);
+
+      // Improved CSV parsing that handles quoted fields with commas
+      const parts: string[] = [];
+      let current = '';
+      let insideQuotes = false;
+      
+      for (let j = 0; j < line.length; j++) {
+        const char = line[j];
+        
+        if (char === '"') {
+          if (insideQuotes && line[j + 1] === '"') {
+            current += '"';
+            j++;
+          } else {
+            insideQuotes = !insideQuotes;
+          }
+        } else if (char === ',' && !insideQuotes) {
+          parts.push(current);
+          current = '';
+        } else {
+          current += char;
+        }
+      }
+      parts.push(current);
+
+      console.log(`Parsed parts:`, parts);
+
       if (parts.length !== 3) {
-        throw new Error(`Row ${index + 1}: Each row must have exactly 3 columns.`);
+        throw new Error(`Row ${i + 2}: Expected 3 columns but found ${parts.length}.`);
       }
 
-      const [type, find, replace] = parts.map(p => p.trim().replace(/^"|"$/g, '').replace(/""/g, '"'));
+      const [type, find, replace] = parts.map(p => p.trim());
+
+      if (!type || !find || !replace) {
+        throw new Error(`Row ${i + 2}: All columns must have values.`);
+      }
 
       if (type !== 'literal' && type !== 'regex') {
-        throw new Error(`Row ${index + 1}: Type must be 'literal' or 'regex'.`);
+        throw new Error(`Row ${i + 2}: Type must be 'literal' or 'regex', got '${type}'.`);
       }
 
       if (type === 'regex') {
         try {
           new RegExp(find);
         } catch (e) {
-          throw new Error(`Row ${index + 1}: Invalid Regex pattern in 'find' column.`);
+          throw new Error(`Row ${i + 2}: Invalid regex pattern '${find}'.`);
         }
       }
-      return { id: `imported-rule-${Date.now()}-${index}`, type: type as 'literal' | 'regex', find, replace, enabled: true };
-    }).filter(Boolean) as RedactionRule[];
+
+      rules.push({
+        id: `imported-rule-${Date.now()}-${i}`,
+        type: type as 'literal' | 'regex',
+        find,
+        replace,
+        enabled: true
+      });
+    }
+
+    if (rules.length === 0) {
+      throw new Error("No valid rules found in CSV file.");
+    }
+
+    console.log("Validation complete, rules:", rules);
+    return rules;
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("File input changed - event fired!");
+    const file = e.target.files?.[0];
+    
+    if (!file) {
+      console.log("No file selected");
+      return;
+    }
+    
+    console.log("File selected:", file.name, file.size, "bytes");
+    
+    try {
+      const text = await readFileAsText(file);
+      console.log("File read successfully, length:", text.length);
+      console.log("First 200 chars:", text.substring(0, 200));
+      
+      const importedRules = validateAndParseCSV(text);
+      console.log("Parsed rules:", importedRules.length);
+      
+      const confirmed = window.confirm(
+        `Found ${importedRules.length} valid rule${importedRules.length !== 1 ? 's' : ''}.\n\n` +
+        `Importing will REPLACE all ${rules.length} existing rule${rules.length !== 1 ? 's' : ''}.\n\n` +
+        `Continue?`
+      );
+      
+      console.log("User confirmed:", confirmed);
+      
+      if (confirmed) {
+        console.log("Saving rules...");
+        setRules(importedRules);
+        await saveRules(importedRules);
+        console.log("Save complete");
+        alert(`Successfully imported ${importedRules.length} rule${importedRules.length !== 1 ? 's' : ''}!`);
+      }
+    } catch (error) {
+      console.error("Import error:", error);
+      alert(`Import failed:\n\n${(error as Error).message}`);
+    } finally {
+      // Reset the file input so same file can be selected again
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleImportClick = () => {
+    console.log("Import button clicked");
+    console.log("File input ref exists:", !!fileInputRef.current);
+    if (fileInputRef.current) {
+      console.log("Triggering file picker...");
+      fileInputRef.current.click();
+    } else {
+      console.error("File input ref is null!");
+    }
   };
 
   const literalRules = rules.filter((r) => r.type === 'literal');
@@ -137,13 +244,13 @@ function RulesPanel() {
       <AddRuleForm onAddRule={handleAddRule} />
       <div className="data-management">
         <button onClick={handleExportRules}>Export Rules</button>
-        <button onClick={() => fileInputRef.current?.click()}>Import Rules</button>
+        <button onClick={handleImportClick}>Import Rules</button>
         <input 
           type="file" 
           ref={fileInputRef} 
           style={{ display: 'none' }} 
           accept=".csv" 
-          onChange={handleFileSelected} 
+          onChange={handleFileChange}
         />
       </div>
       <h4>Literal Rules</h4>

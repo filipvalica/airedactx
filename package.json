@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
+    "build:firefox": "tsc && cross-env BROWSER=firefox vite build",
+    "build:chrome": "tsc && cross-env BROWSER=chrome vite build",
     "preview": "vite preview"
   },
   "keywords": [
@@ -26,6 +28,7 @@
     "@types/react-dom": "^19.1.9",
     "@types/webextension-polyfill": "^0.12.3",
     "@vitejs/plugin-react": "^5.0.4",
+    "cross-env": "^10.1.0",
     "typescript": "^5.9.2",
     "vite": "^7.1.7"
   }

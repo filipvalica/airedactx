@@ -18,3 +18,8 @@ browser.contextMenus.onClicked.addListener((info, tab) => {
     });
   }
 });
+
+// Open options page when extension icon is clicked
+browser.action.onClicked.addListener(() => {
+  browser.runtime.openOptionsPage();
+});
