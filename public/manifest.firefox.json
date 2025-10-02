@@ -16,13 +16,6 @@
     "scripts": ["background.js"],
     "type": "module"
   },
-  "content_scripts": [
-    {
-      "matches": ["<all_urls>"],
-      "js": ["content.js"],
-      "all_frames": true
-    }
-  ],
   "action": {
     "default_title": "AIRedactX - Click to open settings"
   },

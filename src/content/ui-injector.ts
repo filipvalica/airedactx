@@ -38,10 +38,16 @@ export const hideRedactionUI = () => {
 
 const positionPanel = (target: HTMLElement, position: AppSettings['hoverAreaPosition']) => {
     if (!buttonPanel) return;
+    
+    // Get the bounding rectangle of the target element
     const rect = target.getBoundingClientRect();
     const panelRect = buttonPanel.getBoundingClientRect();
     const scrollX = window.scrollX;
     const scrollY = window.scrollY;
+    
+    // Get viewport dimensions for boundary checking
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
 
     let top = 0;
     let left = 0;
@@ -64,7 +70,19 @@ const positionPanel = (target: HTMLElement, position: AppSettings['hoverAreaPosi
             left = rect.right + scrollX - panelRect.width - 5;
             break;
     }
+    
+    // Ensure the panel stays within viewport bounds
+    if (left < 5) left = 5;
+    if (left + panelRect.width > viewportWidth - 5) {
+        left = viewportWidth - panelRect.width - 5;
+    }
+    if (top < 5) top = 5;
+    if (top + panelRect.height > viewportHeight - 5) {
+        top = viewportHeight - panelRect.height - 5;
+    }
 
     buttonPanel.style.top = `${top}px`;
     buttonPanel.style.left = `${left}px`;
+    buttonPanel.style.position = 'absolute';
+    buttonPanel.style.zIndex = '10000';
 };

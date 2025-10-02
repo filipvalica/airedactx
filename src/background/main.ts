@@ -1,22 +1,12 @@
 // src/background/main.ts
 import browser from 'webextension-polyfill';
-import { getRules, saveRules } from '../storage/storageManager';
-import { DEFAULT_RULES } from '../storage/storageManager';
+import { saveRules, DEFAULT_RULES } from '../storage/storageManager';
 
-// Set default rules on installation
 browser.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === 'install') {
-    // Check if rules already exist to avoid overwriting user data on update
-    const existingRules = await getRules();
-    // The default getRules returns a default set if empty, so we check against that
-    // A more direct check against storage might be better, but this works
-    if (existingRules.length <= 2 && existingRules[0]?.find === 'John Doe') {
-        await saveRules(DEFAULT_RULES);
-        console.log('AIRedactX: Default rules have been installed.');
-    }
+    await saveRules(DEFAULT_RULES);
+    console.log('AIRedactX: Default rules installed.');
   }
-
-  // Create the context menu
   browser.contextMenus.create({
     id: 'redact-this-field',
     title: 'Redact this field',
@@ -24,17 +14,27 @@ browser.runtime.onInstalled.addListener(async (details) => {
   });
 });
 
-// Listen for clicks on the context menu item
-browser.contextMenus.onClicked.addListener((info, tab) => {
+browser.contextMenus.onClicked.addListener(async (info, tab) => {
   if (info.menuItemId === 'redact-this-field' && tab?.id) {
-    // The message needs to be sent to the specific frame that was clicked
-    browser.tabs.sendMessage(tab.id, {
-      command: 'redact-from-context-menu',
-    }, { frameId: info.frameId });
+    try {
+      // Step 1: Programmatically inject the content script into the correct frame.
+      // This guarantees the script is running before we send a message.
+      await browser.scripting.executeScript({
+        target: { tabId: tab.id, frameIds: info.frameId ? [info.frameId] : [0] },
+        files: ['content.js'],
+      });
+
+      // Step 2: Send the message to the now-active content script.
+      await browser.tabs.sendMessage(tab.id, {
+        command: 'redact-from-context-menu',
+      }, { frameId: info.frameId });
+
+    } catch (error) {
+      console.error('AIRedactX: Injection or messaging failed:', error);
+    }
   }
 });
 
-// Open options page when extension icon is clicked
 browser.action.onClicked.addListener(() => {
   browser.runtime.openOptionsPage();
 });
