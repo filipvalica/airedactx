@@ -25,7 +25,7 @@ export const SettingsPanel = () => {
     if (settings) {
       await saveSettings(settings);
       setStatus('Settings saved successfully!');
-      setTimeout(() => setStatus(''), 2000); // Clear message after 2s
+      setTimeout(() => setStatus(''), 2000);
     }
   };
 
@@ -43,7 +43,7 @@ export const SettingsPanel = () => {
           checked={settings.useAnywhereMode}
           onChange={(e) => handleSettingChange('useAnywhereMode', e.target.checked)}
         />
-        <p className="description">Enable functionality on unsupported websites. [cite: 36]</p>
+        <p className="description">Enable functionality on unsupported websites.</p>
       </div>
 
       <div className="form-group">
@@ -58,7 +58,23 @@ export const SettingsPanel = () => {
           <option value="bottom-left">Bottom Left</option>
           <option value="bottom-right">Bottom Right</option>
         </select>
-        <p className="description">The corner where the button group will appear. [cite: 34]</p>
+        <p className="description">The corner where the button group will appear.</p>
+      </div>
+
+      <div className="form-group">
+        <label htmlFor="replaceTextUsing">Replacement Delimiter Style</label>
+        <select
+          id="replaceTextUsing"
+          value={settings.replaceTextUsing}
+          onChange={(e) => handleSettingChange('replaceTextUsing', e.target.value)}
+        >
+          <option value="[[..]]">[[..]]</option>
+          {/* Corrected: Wrap the string in a JSX expression to avoid misinterpretation. */}
+          <option value="{{..}}">{`{{..}}`}</option>
+          <option value="((..))">((..))</option>
+          <option value="<<..>>">{`<<..>>`}</option>
+        </select>
+        <p className="description">The style used for redaction placeholders.</p>
       </div>
       
       <button onClick={handleSave} className="save-button">Save Settings</button>

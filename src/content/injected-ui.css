@@ -1,0 +1,27 @@
+/* src/content/injected-ui.css */
+.airedactx-button-panel {
+    position: absolute;
+    z-index: 9999;
+    background-color: rgba(255, 255, 255, 0.9);
+    border: 1px solid #E0E0E0;
+    border-radius: 6px;
+    padding: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    display: flex;
+    gap: 4px;
+}
+
+.airedactx-button {
+    background-color: #0060DF;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.airedactx-button:hover {
+    background-color: #0052BF;
+}
