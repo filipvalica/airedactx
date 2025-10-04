@@ -26,7 +26,6 @@ export default defineConfig({
           mkdirSync(iconsDir, { recursive: true });
         }
         try {
-          // Update the filename to copy the new SVG icon
           copyFileSync(
             resolve(__dirname, 'public/icons/icon-48.svg'),
             resolve(iconsDir, 'icon-48.svg')
@@ -34,15 +33,23 @@ export default defineConfig({
         } catch (e) {
           console.warn('Icon file not found.');
         }
+
+        // *** CRITICAL FIX: COPY THE CSS FILE ***
+        try {
+          copyFileSync(
+            resolve(__dirname, 'src/content/injected-styles.css'),
+            resolve(distDir, 'injected-styles.css') // Copy it to the root of dist
+          );
+        } catch (e) {
+          console.error('Failed to copy injected-styles.css', e);
+        }
       }
     }
   ],
   build: {
     outDir: resolve(__dirname, 'dist'),
-    // This main build will clear the directory.
     emptyOutDir: true, 
     rollupOptions: {
-      // The only input for this build is the popup HTML.
       input: resolve(__dirname, 'index.html'),
     },
   },

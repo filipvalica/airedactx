@@ -29,7 +29,7 @@
     {
       "resources": [
         "content.js",
-        "src/content/injected-styles.css"
+        "injected-styles.css"
       ],
       "matches": [
         "<all_urls>"
@@ -41,9 +41,13 @@
       "matches": [
         "<all_urls>"
       ],
+      "js": [
+        "content.js"
+      ],
       "css": [
-        "src/content/injected-styles.css"
-      ]
+        "injected-styles.css"
+      ],
+      "all_frames": true
     }
   ]
 }

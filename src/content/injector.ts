@@ -5,10 +5,27 @@ import { performRedaction } from '../core/engine';
 import { showRedactionUI, hideRedactionUI } from './ui-injector';
 
 let currentActiveElement: HTMLElement | null = null;
+let hideTimeoutId: number | null = null;
 
-// --- Core Functions ---
+const handleRedaction = async (element: HTMLElement | null) => {
+  if (!element) {
+    console.error("AIRedactX: Redaction called with no active element.");
+    return;
+  }
 
-const handleRedaction = async (element: HTMLElement) => {
+  // *** FINAL FIX FOR SHADOW DOM STYLING ***
+  const rootNode = element.getRootNode();
+  if (rootNode instanceof ShadowRoot) {
+    // Check if styles are already injected to avoid duplicates
+    if (!rootNode.querySelector('#airedactx-styles')) {
+      const styleLink = document.createElement('link');
+      styleLink.id = 'airedactx-styles';
+      styleLink.rel = 'stylesheet';
+      styleLink.href = browser.runtime.getURL('injected-styles.css');
+      rootNode.appendChild(styleLink);
+    }
+  }
+
   const rules = await getRules();
   const settings = await getSettings();
   let textToRedact = '';
@@ -27,68 +44,80 @@ const handleRedaction = async (element: HTMLElement) => {
     element.innerText = redactedText;
   }
   
+  // This class will now be recognized because the stylesheet is inside the Shadow DOM.
   element.classList.add('airedactx-redacted-field');
   element.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
 };
 
-function isEditable(el: Element | null): el is HTMLElement {
-  if (!el) return false;
-  const element = el as HTMLElement;
-  const tagName = element.tagName.toUpperCase();
-  if (tagName === 'TEXTAREA' || element.isContentEditable) return true;
-  if (tagName === 'INPUT') {
-      const inputTypes = ['text', 'email', 'password', 'search', 'tel', 'url'];
-      return inputTypes.includes((element as HTMLInputElement).type.toLowerCase());
-  }
-  if (element.getAttribute('role') === 'textbox') return true;
-  return false;
+function isEditable(el: EventTarget | null): el is HTMLElement {
+  if (!el || !(el instanceof HTMLElement)) return false;
+
+  const tagName = el.tagName.toUpperCase();
+  const isTextInput = tagName === 'INPUT' && ['text', 'email', 'password', 'search', 'tel', 'url'].includes((el as HTMLInputElement).type.toLowerCase());
+  
+  return (
+    tagName === 'TEXTAREA' ||
+    el.isContentEditable ||
+    isTextInput ||
+    el.getAttribute('role') === 'textbox'
+  );
 }
 
 function getActiveElement(root: Document | ShadowRoot = document): Element | null {
-    const activeEl = root.activeElement;
+    let activeEl = root.activeElement;
     if (!activeEl) return null;
-    if (activeEl.shadowRoot) {
-        return getActiveElement(activeEl.shadowRoot) || activeEl;
+
+    while (activeEl && activeEl.shadowRoot) {
+        const nextEl: Element | null = activeEl.shadowRoot.activeElement;
+        if (nextEl) {
+            activeEl = nextEl;
+        } else {
+            break;
+        }
     }
     return activeEl;
 }
-
-// --- Event Listener Setup ---
 
 if (!(window as any).hasAIRedactXListeners) {
   (window as any).hasAIRedactXListeners = true;
 
   document.addEventListener('focusin', async (event) => {
-      const target = event.composedPath()[0] as HTMLElement;
-      if (isEditable(target)) {
-          currentActiveElement = target;
+    if (hideTimeoutId) {
+      clearTimeout(hideTimeoutId);
+      hideTimeoutId = null;
+    }
+
+    const target = event.composedPath()[0] as HTMLElement;
+
+    if (isEditable(target)) {
+      currentActiveElement = target;
+      setTimeout(async () => {
+        if (currentActiveElement === target) {
           const settings = await getSettings();
           if (settings.useAnywhereMode) {
-              showRedactionUI(target, settings, () => handleRedaction(target));
+            showRedactionUI(target, settings, () => handleRedaction(currentActiveElement));
           }
-      }
-  });
+        }
+      }, 100);
+    }
+  }, true);
 
   document.addEventListener('focusout', (event) => {
-    const relatedTarget = event.relatedTarget as HTMLElement;
-    if (currentActiveElement && (!relatedTarget || !relatedTarget.closest('.airedactx-button-panel'))) {
+    const relatedTarget = event.relatedTarget as HTMLElement | null;
+    if (!relatedTarget || !relatedTarget.closest('.airedactx-button-panel')) {
+      hideTimeoutId = window.setTimeout(() => {
         hideRedactionUI();
         currentActiveElement = null;
+      }, 50);
     }
-  });
+  }, true);
 }
 
-// CORRECTED LINE: Added the type for the 'sender' parameter.
-browser.runtime.onMessage.addListener(async (message: any, sender: browser.Runtime.MessageSender) => {
-  if (message.processed) return;
-
+browser.runtime.onMessage.addListener(async (message: any) => {
   if (message.command === 'redact-from-context-menu') {
-    message.processed = true; 
-    
     const activeElement = getActiveElement() as HTMLElement;
     if (activeElement && isEditable(activeElement)) {
       handleRedaction(activeElement);
     }
   }
-  return true; 
 });
