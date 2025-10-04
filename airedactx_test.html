@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIRedactX Test Page</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section h2 {
+            margin-top: 0;
+            color: #333;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .field-label {
+            font-weight: 600;
+            margin: 15px 0 5px 0;
+            color: #555;
+        }
+        .field-description {
+            font-size: 13px;
+            color: #666;
+            margin: 0 0 5px 0;
+            font-style: italic;
+        }
+        textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0 15px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            box-sizing: border-box;
+            min-height: 150px;
+            resize: vertical;
+            font-family: inherit;
+        }
+        .contenteditable-div {
+            width: 100%;
+            min-height: 150px;
+            padding: 10px;
+            margin: 5px 0 15px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+            box-sizing: border-box;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .contenteditable-div:focus {
+            outline: 2px solid #007bff;
+            border-color: #007bff;
+        }
+        .editor-wrapper {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin: 5px 0 15px 0;
+        }
+        .editor-toolbar {
+            background: #f8f9fa;
+            padding: 8px;
+            border-bottom: 1px solid #ddd;
+            font-size: 12px;
+            color: #666;
+        }
+        .modern-input-container {
+            position: relative;
+            margin: 5px 0 15px 0;
+        }
+        .modern-textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s;
+            box-sizing: border-box;
+            min-height: 150px;
+            resize: vertical;
+            font-family: inherit;
+        }
+        .modern-textarea:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0,123,255,0.1);
+            outline: none;
+        }
+        .chat-composer {
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 12px;
+            margin: 5px 0 15px 0;
+            min-height: 150px;
+            position: relative;
+            font-size: 14px;
+            line-height: 1.5;
+        }
+        .chat-composer[contenteditable]:focus {
+            outline: 2px solid #007bff;
+            border-color: #007bff;
+        }
+        .chat-composer:empty:before {
+            content: attr(data-placeholder);
+            color: #999;
+        }
+        #shadow-host {
+            margin: 5px 0 15px 0;
+        }
+        .complex-editor {
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+            margin: 5px 0 15px 0;
+        }
+        .complex-editor-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 16px;
+            font-weight: 600;
+        }
+        .complex-editor-body {
+            padding: 16px;
+            background: white;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>AIRedactX Extension Test Page</h1>
+    <div class="status info">
+        <strong>Instructions:</strong> Enable "Use Anywhere Mode" in extension settings. Click into each field and look for the redaction button to appear. Each field contains sample PII data for testing.
+    </div>
+
+    <!-- LEVEL 1: Basic HTML Textarea -->
+    <div class="test-section">
+        <h2>Level 1: Basic HTML Textarea</h2>
+        
+        <div class="field-label">1. Standard Textarea Element</div>
+        <div class="field-description">Testing: &lt;textarea&gt;</div>
+        <textarea id="basic-textarea">John Doe has SSN 123-45-6789 and can be reached at john.doe@email.com or call 555-867-5309. His credit card is 4532-1488-0343-6467 and IP address is 192.168.1.100. AWS key: AKIAIOSFODNN7EXAMPLE</textarea>
+    </div>
+
+    <!-- LEVEL 2: ContentEditable Div (Basic) -->
+    <div class="test-section">
+        <h2>Level 2: ContentEditable Div (Basic)</h2>
+        
+        <div class="field-label">2. ContentEditable="true"</div>
+        <div class="field-description">Testing: &lt;div contenteditable="true"&gt;</div>
+        <div class="contenteditable-div" contenteditable="true">John Doe has SSN 123-45-6789 and can be reached at john.doe@email.com or call 555-867-5309. His credit card is 4532-1488-0343-6467 and IP address is 192.168.1.100. AWS key: AKIAIOSFODNN7EXAMPLE</div>
+    </div>
+
+    <!-- LEVEL 3: ContentEditable with Role -->
+    <div class="test-section">
+        <h2>Level 3: ContentEditable with ARIA Role</h2>
+        
+        <div class="field-label">3. Div with role="textbox"</div>
+        <div class="field-description">Testing: &lt;div role="textbox" contenteditable="true"&gt;</div>
+        <div class="contenteditable-div" role="textbox" contenteditable="true">John Doe has SSN 123-45-6789 and can be reached at john.doe@email.com or call 555-867-5309. His credit card is 4532-1488-0343-6467 and IP address is 192.168.1.100. AWS key: AKIAIOSFODNN7EXAMPLE</div>
+    </div>
+
+    <!-- LEVEL 4: Class Pattern Matching -->
+    <div class="test-section">
+        <h2>Level 4: Class Pattern Detection</h2>
+        
+        <div class="field-label">4. Multiple Target Classes</div>
+        <div class="field-description">Testing: &lt;div class="editor composer message"&gt;</div>
+        <div class="contenteditable-div editor composer message" contenteditable="true">John Doe has SSN 123-45-6789 and can be reached at john.doe@email.com or call 555-867-5309. His credit card is 4532-1488-0343-6467 and IP address is 192.168.1.100. AWS key: AKIAIOSFODNN7EXAMPLE</div>
+    </div>
+
+    <!-- LEVEL 5: Modern Styled Textarea -->
+    <div class="test-section">
+        <h2>Level 5: Modern Styled Textarea</h2>
+        
+        <div class="field-label">5. Custom Styled Textarea</div>
+        <div class="field-description">Testing: &lt;textarea&gt; with modern CSS styling</div>
+        <div class="modern-input-container">
+            <textarea class="modern-textarea">John Doe has SSN 123-45-6789 and can be reached at john.doe@email.com or call 555-867-5309. His credit card is 4532-1488-0343-6467 and IP address is 192.168.1.100. AWS key: AKIAIOSFODNN7EXAMPLE</textarea>
+        </div>
+    </div>
+
+    <!-- LEVEL 6: Chat-Style Composer -->
+    <div class="test-section">
+        <h2>Level 6: Chat-Style Composer</h2>
+        
+        <div class="field-label">6. ChatGPT-Style Input</div>
+        <div class="field-description">Testing: &lt;div contenteditable role="textbox" class="prompt"&gt;</div>
+        <div class="chat-composer" 
+             contenteditable="true" 
+             role="textbox"
+             class="prompt">John Doe has SSN 123-45-6789 and can be reached at john.doe@email.com or call 555-867-5309. His credit card is 4532-1488-0343-6467 and IP address is 192.168.1.100. AWS key: AKIAIOSFODNN7EXAMPLE</div>
+    </div>
+
+    <!-- LEVEL 7: Editor with Toolbar -->
+    <div class="test-section">
+        <h2>Level 7: Rich Text Editor Style</h2>
+        
+        <div class="field-label">7. Editor with Toolbar Container</div>
+        <div class="field-description">Testing: ContentEditable inside wrapper with toolbar</div>
+        <div class="editor-wrapper">
+            <div class="editor-toolbar">
+                [B] [I] [U] - Toolbar (non-functional)
+            </div>
+            <div class="contenteditable-div editor" contenteditable="true" style="border:none; margin:0;">John Doe has SSN 123-45-6789 and can be reached at john.doe@email.com or call 555-867-5309. His credit card is 4532-1488-0343-6467 and IP address is 192.168.1.100. AWS key: AKIAIOSFODNN7EXAMPLE</div>
+        </div>
+    </div>
+
+    <!-- LEVEL 8: Shadow DOM Component -->
+    <div class="test-section">
+        <h2>Level 8: Shadow DOM Component</h2>
+        
+        <div class="field-label">8. Web Component with Shadow DOM</div>
+        <div class="field-description">Testing: Textarea inside attachShadow({mode: 'open'})</div>
+        <div id="shadow-host"></div>
+    </div>
+
+    <!-- LEVEL 9: Complex Modern Editor -->
+    <div class="test-section">
+        <h2>Level 9: Complex Modern Editor</h2>
+        
+        <div class="field-label">9. Multi-Layer Styled Component</div>
+        <div class="field-description">Testing: ContentEditable with multiple classes inside styled wrapper</div>
+        <div class="complex-editor">
+            <div class="complex-editor-header">
+                Message Composer
+            </div>
+            <div class="complex-editor-body">
+                <div class="contenteditable-div composer message editor prompt" 
+                     contenteditable="true"
+                     role="textbox"
+                     style="border:none; margin:0; min-height:120px;">John Doe has SSN 123-45-6789 and can be reached at john.doe@email.com or call 555-867-5309. His credit card is 4532-1488-0343-6467 and IP address is 192.168.1.100. AWS key: AKIAIOSFODNN7EXAMPLE</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample text to use
+        const sampleText = "John Doe has SSN 123-45-6789 and can be reached at john.doe@email.com or call 555-867-5309. His credit card is 4532-1488-0343-6467 and IP address is 192.168.1.100. AWS key: AKIAIOSFODNN7EXAMPLE";
+
+        // Create Shadow DOM component with textarea
+        const shadowHost = document.getElementById('shadow-host');
+        const shadowRoot = shadowHost.attachShadow({ mode: 'open' });
+        
+        shadowRoot.innerHTML = `
+            <style>
+                .shadow-textarea {
+                    width: 100%;
+                    padding: 10px;
+                    border: 1px solid #ddd;
+                    border-radius: 4px;
+                    font-size: 14px;
+                    box-sizing: border-box;
+                    background: #f9f9f9;
+                    min-height: 150px;
+                    resize: vertical;
+                    font-family: inherit;
+                }
+                .shadow-textarea:focus {
+                    outline: 2px solid #007bff;
+                    border-color: #007bff;
+                }
+            </style>
+            <textarea class="shadow-textarea">${sampleText}</textarea>
+        `;
+
+        // Log when fields are focused (for debugging)
+        document.addEventListener('focusin', (e) => {
+            console.log('Field focused:', {
+                tagName: e.target.tagName,
+                type: e.target.type,
+                id: e.target.id,
+                classes: e.target.className,
+                contentEditable: e.target.contentEditable,
+                role: e.target.getAttribute('role'),
+                text: e.target.textContent?.substring(0, 50) || e.target.value?.substring(0, 50)
+            });
+        });
+
+        // Add success indicator when extension button appears
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === 1 && (
+                        node.textContent?.includes('Redact') || 
+                        node.className?.includes('redact')
+                    )) {
+                        console.log('✓ Redaction button detected!', node);
+                    }
+                });
+            });
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+
+        console.log('AIRedactX Test Page loaded. Sample text contains:');
+        console.log('- SSN: 123-45-6789');
+        console.log('- Email: john.doe@email.com');
+        console.log('- Phone: 555-867-5309');
+        console.log('- Credit Card: 4532-1488-0343-6467');
+        console.log('- IP: 192.168.1.100');
+        console.log('- AWS Key: AKIAIOSFODNN7EXAMPLE');
+    </script>
+</body>
+</html>

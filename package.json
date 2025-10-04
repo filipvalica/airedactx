@@ -5,9 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "build:firefox": "tsc && cross-env BROWSER=firefox vite build",
-    "build:chrome": "tsc && cross-env BROWSER=chrome vite build",
+    "prebuild": "rimraf dist",
+    "build:ui": "vite build --config vite.config.ts",
+    "build:background": "vite build --config vite.background.config.ts",
+    "build:content": "vite build --config vite.content.config.ts",
+    "build": "npm run build:ui && npm run build:background && npm run build:content",
+    "build:firefox": "cross-env BROWSER=firefox npm run build",
+    "build:chrome": "cross-env BROWSER=chrome npm run build",
     "preview": "vite preview"
   },
   "keywords": [
@@ -31,6 +35,7 @@
     "@types/webextension-polyfill": "^0.12.3",
     "@vitejs/plugin-react": "^5.0.4",
     "cross-env": "^10.1.0",
+    "rimraf": "^5.0.5",
     "typescript": "^5.9.2",
     "vite": "^7.1.7"
   }

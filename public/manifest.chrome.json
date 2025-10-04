@@ -19,10 +19,31 @@
   "action": {
     "default_popup": "index.html",
     "default_icon": {
-      "48": "icons/icon-48.png"
+      "48": "icons/icon-48.svg"
     }
   },
   "icons": {
-    "48": "icons/icon-48.png"
-  }
+    "48": "icons/icon-48.svg"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "content.js",
+        "src/content/injected-styles.css"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "css": [
+        "src/content/injected-styles.css"
+      ]
+    }
+  ]
 }

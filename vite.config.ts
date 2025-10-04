@@ -4,72 +4,47 @@ import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
 import { copyFileSync, mkdirSync, existsSync } from 'fs';
 
+// This config is now ONLY for the popup UI and manifest/icon copying.
 export default defineConfig({
   plugins: [
     react(),
     {
-      name: 'copy-manifest',
+      name: 'copy-files',
       closeBundle() {
-        // Determine which manifest to use (default to Firefox for dev)
         const browser = process.env.BROWSER || 'firefox';
-        const manifestSource = browser === 'chrome' 
-          ? 'public/manifest.chrome.json' 
-          : 'public/manifest.firefox.json';
+        const manifestSource = resolve(__dirname, 'public', `manifest.${browser}.json`);
+        const distDir = resolve(__dirname, 'dist');
+
+        if (!existsSync(distDir)) {
+          mkdirSync(distDir, { recursive: true });
+        }
+        copyFileSync(manifestSource, resolve(distDir, 'manifest.json'));
         
-        console.log(`Building for ${browser}, using ${manifestSource}`);
-        
-        // Copy the appropriate manifest
-        copyFileSync(
-          resolve(__dirname, manifestSource),
-          resolve(__dirname, 'dist/manifest.json')
-        );
-        
-        // Ensure icons directory exists
-        const iconsDir = resolve(__dirname, 'dist/icons');
+        // Handle icons
+        const iconsDir = resolve(distDir, 'icons');
         if (!existsSync(iconsDir)) {
           mkdirSync(iconsDir, { recursive: true });
         }
-        
-        // Copy icons if they exist
         try {
+          // Update the filename to copy the new SVG icon
           copyFileSync(
-            resolve(__dirname, 'public/icons/icon-48.png'),
-            resolve(__dirname, 'dist/icons/icon-48.png')
+            resolve(__dirname, 'public/icons/icon-48.svg'),
+            resolve(iconsDir, 'icon-48.svg')
           );
         } catch (e) {
-          console.warn('Icon file not found, creating placeholder...');
-          // Create a simple placeholder if icon doesn't exist
+          console.warn('Icon file not found.');
         }
       }
     }
   ],
   build: {
-    outDir: 'dist',
-    emptyOutDir: true,
+    outDir: resolve(__dirname, 'dist'),
+    // This main build will clear the directory.
+    emptyOutDir: true, 
     rollupOptions: {
-      input: {
-        popup: resolve(__dirname, 'index.html'),
-        background: resolve(__dirname, 'src/background/main.ts'),
-        content: resolve(__dirname, 'src/content/injector.ts'),
-      },
-      output: {
-        entryFileNames: (chunkInfo) => {
-          // Keep background.js and content.js at root level
-          if (chunkInfo.name === 'background' || chunkInfo.name === 'content') {
-            return '[name].js';
-          }
-          return 'assets/[name]-[hash].js';
-        },
-        chunkFileNames: 'assets/[name]-[hash].js',
-        assetFileNames: (assetInfo) => {
-          // Keep index.html at root
-          if (assetInfo.name === 'index.html') {
-            return '[name].[ext]';
-          }
-          return 'assets/[name]-[hash].[ext]';
-        },
-      },
+      // The only input for this build is the popup HTML.
+      input: resolve(__dirname, 'index.html'),
     },
   },
-  publicDir: false, // Don't auto-copy public dir, we do it manually
+  publicDir: false,
 });

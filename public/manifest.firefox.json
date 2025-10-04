@@ -17,18 +17,39 @@
     "type": "module"
   },
   "action": {
-    "default_title": "AIRedactX - Click to open settings"
+    "default_title": "AIRedactX - Click to open settings",
+    "default_icon": "icons/icon-48.svg"
   },
   "options_ui": {
     "page": "index.html",
     "open_in_tab": true
   },
   "icons": {
-    "48": "icons/icon-48.png"
+    "48": "icons/icon-48.svg"
   },
   "browser_specific_settings": {
     "gecko": {
       "id": "airedactx@example.com"
     }
-  }
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "content.js"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "css": [
+        "src/content/injected-styles.css"
+      ]
+    }
+  ]
 }
