@@ -1,83 +1,84 @@
 AIRedactX Redaction Extension
 
 AIRedactX is a browser extension designed to help users automatically find and redact sensitive information from text fields before submission. It provides a configurable and user-friendly way to protect personally identifiable information (PII) when interacting with websites and AI chatbots.
+
 ⚠️ Current Status: Alpha - Under Active Development
 
-This extension is currently not functional and is undergoing active development and troubleshooting.
+## Core Features
 
-The core user interface and redaction engine have been built, but a significant bug is preventing the extension from reliably detecting and interacting with text fields on modern websites. This is a known issue that is the current focus of development. The project is not yet ready for general use or testing.
-Core Features (MVP Goals)
+* **Configurable Redaction Rules**: Create custom rules to find and replace sensitive text using simple literal matching or powerful regular expressions (Regex).
+* **On-Page Redaction Controls**: A "Redact" button appears inside active text areas for quick, one-click redaction.
+* **Context Menu Action**: Right-click any text field and select "Redact this field" for easy access.
+* **Rule Management**: Enable/disable rules, drag-and-drop to reorder priority, and import/export your entire ruleset as a `.csv` file.
+* **Customizable Settings**: Choose your preferred redaction style (e.g., `[[..]]`, `{{..}}`) and the position of the on-page controls.
 
-    Configurable Redaction Rules: Create custom rules to find and replace sensitive text.
+## Technology Stack
 
-        Literal Rules: Simple word-for-word replacement (e.g., "John Doe" → "REDACTED_NAME").
+* **Language**: TypeScript
+* **Framework**: React for the options UI
+* **Build Tool**: Vite
+* **Browser API**: WebExtension API (Manifest V3)
 
-        Regex Rules: Powerful pattern-based matching for data like phone numbers, emails, and API keys.
+## Getting Started (for Developers)
 
-    On-Page Redaction Controls: A "Redact" button appears inside active text areas for quick, one-click redaction.
+Follow these steps to set up the development environment, build the extension, and load it in your browser.
 
-    Context Menu Action: Right-click any text field and select "Redact this field" for easy access.
+### Prerequisites
 
-    Rule Management:
+* [Node.js](https://nodejs.org/) (v20.x or later recommended)
+* [npm](https://www.npmjs.com/) (usually included with Node.js)
 
-        Enable and disable rules with a toggle.
+### 1. Clone the Repository
 
-        Drag-and-drop reordering to control rule priority ("first match wins").
+```bash
+git clone [https://github.com/filipvalica/airedactx.git](https://github.com/filipvalica/airedactx.git)
+cd airedactx
+````
 
-        Import and export your entire ruleset as a .csv file.
+### 2\. Install Dependencies
 
-    Customizable Settings:
+Install all the required packages for the project.
 
-        Choose your preferred redaction style (e.g., [[..]], {{..}}).
+```bash
+npm install
+```
 
-        Select the position of the on-page controls.
+### 3\. Build the Extension
 
-        Enable "Use Anywhere Mode" to run the extension on any website.
+The project includes separate build commands for Firefox and Chrome. The build artifacts will be generated in the `dist/` directory.
 
-Technology Stack
+  * **To build for Firefox:**
 
-    Language: TypeScript
+    ```bash
+    npm run build:firefox
+    ```
 
-    Framework: React for the options UI
+  * **To build for Chrome:**
 
-    Build Tool: Vite
+    ```bash
+    npm run build:chrome
+    ```
 
-    Browser API: WebExtension API (Manifest V3)
+### 4\. Load the Extension in Your Browser
 
-Getting Started (for Developers)
+#### For Firefox
 
-To set up the development environment, follow these steps:
+1.  Navigate to `about:debugging` in the address bar.
+2.  Click on **"This Firefox"** in the left-hand sidebar.
+3.  Click the **"Load Temporary Add-on..."** button.
+4.  Select the `manifest.json` file from within the `dist` directory in your project folder.
 
-    Clone the repository:
+#### For Chrome
 
-    git clone [https://github.com/your-username/airedactx.git](https://github.com/your-username/airedactx.git)
-    cd airedactx
+1.  Navigate to `chrome://extensions` in the address bar.
+2.  Enable **"Developer mode"** using the toggle in the top-right corner.
+3.  Click the **"Load unpacked"** button.
+4.  Select the entire `dist` directory from your project folder.
 
-    Install dependencies:
+### Development Workflow
 
-    npm install
+After making changes to the source code, simply run the appropriate build command (`npm run build:firefox` or `npm run build:chrome`) and then click the **Reload** button next to the extension's entry in `about:debugging` (Firefox) or `chrome://extensions` (Chrome). You do not need to remove and re-add the extension each time.
 
-    Build the extension:
+## License
 
-        To build for Firefox:
-
-        npm run build:firefox
-
-        To build for Chrome:
-
-        npm run build:chrome
-
-    This will create a dist directory containing the unpacked extension files.
-
-    Load the extension in your browser:
-
-        Firefox: Navigate to about:debugging, click "This Firefox," and load the dist/manifest.json file as a temporary add-on.
-
-        Chrome: Navigate to chrome://extensions, enable "Developer mode," and load the dist directory as an unpacked extension.
-
-How to Contribute
-
-Once the core functionality is stable, contributions will be welcome. The immediate goal is to resolve the content script injection and detection issues. If you have expertise in this area, feel free to open an issue to discuss potential solutions.
-License
-
-This project is licensed under the MIT License. See the LICENSE file for details.
+This project is licensed under the MIT License. See the `LICENSE` file for details.
