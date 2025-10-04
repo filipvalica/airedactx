@@ -113,3 +113,29 @@ The engine identifies unique PII instances and assigns a persistent number.
 
 * **Local Environment (Windows):** The recommended toolchain includes **VS Code**, **Node.js**, and **Git**.
 * **Version Control:** **GitHub** will be used for source code management. For ease of use, **GitHub Desktop** is the recommended client for managing commits and synchronization with the online repository.
+
+
+### Product Specification: AIRedactX Redaction Extension
+* **Version:** 1.4
+* **Date:** October 4, 2025
+* **Status:** Finalized for Development
+
+### 1. Summary of Changes in v1.4
+
+Version 1.4 focuses on foundational improvements to data management and user experience, enhancing rule organization and providing more robust settings control. This update establishes a stable base for future feature development, including the switch to a TSV data format, the addition of rule dividers and notes, enhanced import logic, and settings reset functionality.
+
+### 2. Rule Management & Data I/O
+
+This section details the functionalities related to creating, managing, and transferring user-defined redaction rules.
+
+#### 2.1. Data Management Format
+* **Format:** The import/export format for rules is now **TSV (Tab-Separated Values)**, encoded in UTF-8.
+* **TSV Header:** The TSV file must contain a header row with the exact columns in this order: `type`, `find`, `replace`, `Active`, `Note`.
+* **TSV Import Validation:** The extension will validate any imported TSV file. The import will halt with a clear error message if:
+    * The header is missing or incorrect.
+    * Any row does not have the required number of columns.
+    * The `type` column contains a value other than `literal`, `regex`, or `divider`.
+
+#### 2.2. Rule Structure and Elements
+* **Rule Dividers:** A new `divider` type is available for organizing rules. In the UI, this renders as a non-functional, titled separator. The title is derived from the `find` column. Dividers can be added, edited, and repositioned via drag-and-drop.
+* **Note Column:** An optional `Note` field has been added to each rule, with a maximum length of **255 characters**. In the UI, a note icon will appear next to any rule with a note; hovering over this icon will display
