@@ -9,20 +9,6 @@ import { RedactionRule } from '../types';
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
 import { arrayMove, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 
-// This is a new component to contain the form and manage buttons
-const RulesControlPanel = ({ onAddRule, onImport, onExport }: any) => (
-  <div className="control-panel-container">
-    <AddRuleForm onAddRule={onAddRule} />
-    <div className="manage-rules-section">
-      <div className="data-management">
-        <button onClick={onImport}>Import Rules</button>
-        <button onClick={onExport}>Export Rules</button>
-      </div>
-    </div>
-  </div>
-);
-
-
 function RulesPanel() {
   const [rules, setRules] = useState<RedactionRule[]>([]);
   const [recentlyDeleted, setRecentlyDeleted] = useState<{rule: RedactionRule, index: number} | null>(null);
@@ -43,15 +29,17 @@ function RulesPanel() {
     if (over && active.id !== over.id) {
       const oldIndex = rules.findIndex((r) => r.id === active.id);
       const newIndex = rules.findIndex((r) => r.id === over.id);
-      if (rules[oldIndex].type === rules[newIndex].type) {
-        const updatedRules = arrayMove(rules, oldIndex, newIndex);
-        setRules(updatedRules);
-        await saveRules(updatedRules);
-      }
+      const updatedRules = arrayMove(rules, oldIndex, newIndex);
+      setRules(updatedRules);
+      await saveRules(updatedRules);
     }
   };
   
   const handleAddRule = async (newRule: Omit<RedactionRule, 'id' | 'enabled'>) => {
+    if (rules.some(rule => rule.find.trim() === newRule.find.trim())) {
+      alert(`Error: A rule with the match pattern "${newRule.find}" already exists.`);
+      return;
+    }
     const ruleToAdd: RedactionRule = { ...newRule, id: `rule-${Date.now()}`, enabled: true };
     const updatedRules = [...rules, ruleToAdd];
     setRules(updatedRules);
@@ -60,6 +48,14 @@ function RulesPanel() {
   
   const handleToggleRule = async (id: string) => {
     const updatedRules = rules.map((rule) => (rule.id === id ? { ...rule, enabled: !rule.enabled } : rule));
+    setRules(updatedRules);
+    await saveRules(updatedRules);
+  };
+
+  const handleUpdateRule = async (id: string, find: string, replace: string) => {
+    const updatedRules = rules.map(rule => 
+      rule.id === id ? { ...rule, find, replace } : rule
+    );
     setRules(updatedRules);
     await saveRules(updatedRules);
   };
@@ -162,17 +158,26 @@ function RulesPanel() {
       }
     }
   };
-  
-  const literalRules = rules.filter((r) => r.type === 'literal');
-  const regexRules = rules.filter((r) => r.type === 'regex');
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-      <RulesControlPanel 
-        onAddRule={handleAddRule} 
-        onImport={() => fileInputRef.current?.click()}
-        onExport={handleExportRules}
-      />
+      
+      <section className="panel-container">
+        <h4 className="panel-heading">Import / Export Rules</h4>
+        <p className="panel-description">
+          You can save your current ruleset to a CSV file for backup or editing, and import it back later.
+        </p>
+        <div className="data-management">
+          <button onClick={() => fileInputRef.current?.click()}>Import Rules</button>
+          <button onClick={handleExportRules}>Export Rules</button>
+        </div>
+      </section>
+
+      <section className="panel-container">
+        <h4 className="panel-heading">Add Rule</h4>
+        <AddRuleForm onAddRule={handleAddRule} />
+      </section>
+
       <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".csv" onChange={handleFileSelected} />
 
       {recentlyDeleted && (
@@ -181,24 +186,24 @@ function RulesPanel() {
           <button onClick={handleUndoDelete}>Undo</button>
         </div>
       )}
-
-      <section aria-labelledby="literal-rules-heading">
-        <h4 id="literal-rules-heading">Literal Rules</h4>
-        {literalRules.length > 0 ? (
-          <SortableContext items={literalRules.map(r => r.id)} strategy={verticalListSortingStrategy}>
-            <RuleList rules={literalRules} onDelete={handleDeleteRule} onToggle={handleToggleRule} />
-          </SortableContext>
-        ) : <p className="no-rules-message">No literal rules have been added.</p>}
-      </section>
       
-      <section aria-labelledby="regex-rules-heading">
-        <h4 id="regex-rules-heading">Regex Rules</h4>
-        {regexRules.length > 0 ? (
-        <SortableContext items={regexRules.map(r => r.id)} strategy={verticalListSortingStrategy}>
-          <RuleList rules={regexRules} onDelete={handleDeleteRule} onToggle={handleToggleRule} />
-        </SortableContext>
-        ) : <p className="no-rules-message">No regex rules have been added.</p>}
+      <section className="panel-container">
+        <h4 className="panel-heading">All Rules</h4>
+        <p className="panel-description">
+          Rules are applied in order from top to bottom. The first rule that finds a match will be used.
+        </p>
+        {rules.length > 0 ? (
+          <SortableContext items={rules.map(r => r.id)} strategy={verticalListSortingStrategy}>
+            <RuleList 
+              rules={rules} 
+              onDelete={handleDeleteRule} 
+              onToggle={handleToggleRule}
+              onUpdate={handleUpdateRule}
+            />
+          </SortableContext>
+        ) : <p className="no-rules-message">No rules have been added yet.</p>}
       </section>
+
     </DndContext>
   );
 }
