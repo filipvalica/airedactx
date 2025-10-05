@@ -31,7 +31,7 @@ Follow these steps to set up the development environment, build the extension, a
 ### 1. Clone the Repository
 
 ```bash
-git clone [https://github.com/filipvalica/airedactx.git](https://github.com/filipvalica/airedactx.git)
+git clone https://github.com/filipvalica/airedactx.git
 cd airedactx
 ````
 
