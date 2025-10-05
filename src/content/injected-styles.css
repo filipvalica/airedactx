@@ -1,36 +1,33 @@
 /* src/content/injected-styles.css */
-
 .airedactx-button-panel {
-    /* This is now a top-level element, positioned absolutely. */
-    position: absolute;
-    z-index: 2147483647; /* Use a very high z-index */
-    /* Remove padding from the panel itself */
-  }
-  
-  /* Styles for the redact button */
-  .airedactx-button {
-    background-color: #0060DF; /* Primary blue from style guide */
-    color: white;
-    border: 1px solid rgba(0, 0, 0, 0.2);
-    border-radius: 6px;
-    padding: 8px 16px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    transition: background-color 0.2s, transform 0.2s;
-  }
-  
-  .airedactx-button:hover {
-    background-color: #004db2; /* Darker blue for hover */
-  }
-  
-  .airedactx-button:active {
-      transform: translateY(1px);
-      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-  }
-  
-  /* Style for a field after redaction has been applied */
-  .airedactx-redacted-field {
-    background-color: #fff8e1 !important;
-  }
+  position: absolute;
+  z-index: 2147483647;
+}
+
+.airedactx-button {
+  background-color: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.airedactx-button:hover {
+  background-color: #FFFFFF;
+}
+
+.airedactx-button img {
+  width: 24px;
+  height: 24px;
+}
+
+.airedactx-redacted-field {
+  background-color: #fff8e1 !important;
+  color: #212121 !important;
+}

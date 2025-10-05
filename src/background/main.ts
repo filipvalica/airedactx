@@ -1,10 +1,12 @@
 // src/background/main.ts
 import browser from 'webextension-polyfill';
-import { saveRules, DEFAULT_RULES } from '../storage/storageManager';
+import { saveRules, loadMasterRules } from '../storage/storageManager';
 
 browser.runtime.onInstalled.addListener(async (details) => {
   if (details.reason === 'install') {
-    await saveRules(DEFAULT_RULES);
+    // Load rules from the master TSV file and save them to storage.
+    const masterRules = await loadMasterRules();
+    await saveRules(masterRules);
   }
   // This creates the right-click menu item
   browser.contextMenus.create({

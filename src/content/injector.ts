@@ -13,10 +13,8 @@ const handleRedaction = async (element: HTMLElement | null) => {
     return;
   }
 
-  // *** FINAL FIX FOR SHADOW DOM STYLING ***
   const rootNode = element.getRootNode();
   if (rootNode instanceof ShadowRoot) {
-    // Check if styles are already injected to avoid duplicates
     if (!rootNode.querySelector('#airedactx-styles')) {
       const styleLink = document.createElement('link');
       styleLink.id = 'airedactx-styles';
@@ -44,29 +42,20 @@ const handleRedaction = async (element: HTMLElement | null) => {
     element.innerText = redactedText;
   }
   
-  // This class will now be recognized because the stylesheet is inside the Shadow DOM.
   element.classList.add('airedactx-redacted-field');
   element.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
 };
 
 function isEditable(el: EventTarget | null): el is HTMLElement {
   if (!el || !(el instanceof HTMLElement)) return false;
-
   const tagName = el.tagName.toUpperCase();
   const isTextInput = tagName === 'INPUT' && ['text', 'email', 'password', 'search', 'tel', 'url'].includes((el as HTMLInputElement).type.toLowerCase());
-  
-  return (
-    tagName === 'TEXTAREA' ||
-    el.isContentEditable ||
-    isTextInput ||
-    el.getAttribute('role') === 'textbox'
-  );
+  return tagName === 'TEXTAREA' || el.isContentEditable || isTextInput || el.getAttribute('role') === 'textbox';
 }
 
 function getActiveElement(root: Document | ShadowRoot = document): Element | null {
     let activeEl = root.activeElement;
     if (!activeEl) return null;
-
     while (activeEl && activeEl.shadowRoot) {
         const nextEl: Element | null = activeEl.shadowRoot.activeElement;
         if (nextEl) {
@@ -82,12 +71,13 @@ if (!(window as any).hasAIRedactXListeners) {
   (window as any).hasAIRedactXListeners = true;
 
   document.addEventListener('focusin', async (event) => {
-    if (hideTimeoutId) {
-      clearTimeout(hideTimeoutId);
-      hideTimeoutId = null;
-    }
+    if (hideTimeoutId) clearTimeout(hideTimeoutId);
 
     const target = event.composedPath()[0] as HTMLElement;
+
+    if (target.classList.contains('airedactx-redacted-field')) {
+        target.classList.remove('airedactx-redacted-field');
+    }
 
     if (isEditable(target)) {
       currentActiveElement = target;

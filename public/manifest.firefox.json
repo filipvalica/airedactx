@@ -36,7 +36,8 @@
     {
       "resources": [
         "content.js",
-        "injected-styles.css" 
+        "injected-styles.css",
+        "icons/icon-48.svg"
       ],
       "matches": [
         "<all_urls>"

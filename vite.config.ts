@@ -43,6 +43,16 @@ export default defineConfig({
         } catch (e) {
           console.error('Failed to copy injected-styles.css', e);
         }
+
+        // *** ADDED: COPY THE MASTER RULES TSV FILE ***
+        try {
+          copyFileSync(
+            resolve(__dirname, 'airedactx_rules.tsv'),
+            resolve(distDir, 'airedactx_rules.tsv') 
+          );
+        } catch (e) {
+          console.error('Failed to copy airedactx_rules.tsv', e);
+        }
       }
     }
   ],

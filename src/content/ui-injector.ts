@@ -1,5 +1,7 @@
+// src/content/ui-injector.ts
 /// <reference lib="dom" />
 
+import browser from 'webextension-polyfill';
 import { AppSettings } from '../types';
 
 let buttonPanel: HTMLDivElement | null = null;
@@ -13,7 +15,11 @@ const createButtonPanel = (onRedact: () => void): HTMLDivElement => {
 
     const redactButton = document.createElement('button');
     redactButton.className = 'airedactx-button';
-    redactButton.innerText = 'Redact';
+    
+    const icon = document.createElement('img');
+    icon.src = browser.runtime.getURL('icons/icon-48.svg');
+    redactButton.appendChild(icon);
+    
     panel.appendChild(redactButton);
 
     redactButton.addEventListener('mousedown', (e: MouseEvent) => {
