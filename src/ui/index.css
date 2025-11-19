@@ -94,7 +94,7 @@ h1 {
 .add-rule-form {
     display: flex;
     gap: calc(var(--spacing-unit) * 2);
-    align-items: flex-end;
+    align-items: flex-start; /* Changed to flex-start for help text alignment */
 }
 
 .form-group {
@@ -161,28 +161,62 @@ h1 {
     margin: 4px 0 0 0;
 }
 
-/* --- Rule Table --- */
+/* --- Rule Table Layout --- */
 .rule-table {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
     margin-top: var(--spacing-unit);
+    table-layout: fixed;
 }
+
 .rule-table th, .rule-table td {
-    padding: 10px 12px;
+    padding: 8px 12px;
     text-align: left;
     border-bottom: 1px solid var(--color-border);
     vertical-align: middle;
 }
-.rule-table tbody tr:last-child td {
-    border-bottom: none;
+
+/* Specific Column Widths */
+.col-drag { width: 40px; }
+.col-status { width: 60px; }
+.col-type { width: 100px; }
+.col-actions { width: 110px; text-align: right; }
+
+.col-find, .col-replace { width: auto; }
+
+/* Drag Handle */
+.drag-cell {
+    padding: 0 4px !important;
+    text-align: center;
 }
-.rule-table tbody tr:hover td:not(.divider-cell) {
+
+.drag-handle {
+    cursor: grab;
+    padding: 8px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #BDBDBD;
+    transition: color 0.2s, background-color 0.2s;
+}
+.drag-handle:hover {
     background-color: var(--color-hover-bg);
+    color: var(--color-text-primary);
 }
-  
-.col-type { width: 120px; }
-  
+.drag-handle:active { cursor: grabbing; }
+
+/* Cell specific styles */
+.find-text, .replace-text {
+    font-family: monospace;
+    font-size: 13px;
+    word-break: break-word; /* Allow wrapping */
+    line-height: 1.4; 
+    padding-top: 12px;    /* Visual balance */
+    padding-bottom: 12px;
+}
+
 .rule-type-tag {
     display: inline-block;
     padding: 2px 8px;
@@ -190,11 +224,13 @@ h1 {
     font-size: 12px;
     font-weight: 500;
     text-transform: uppercase;
+    vertical-align: middle;
 }
 .tag-literal { background-color: #F0F0F0; color: #212121; }
 .tag-regex { background-color: #FFF1E6; color: #FF6A00; }
 .tag-divider { background-color: #E6F0FF; color: #0060DF; }
 
+/* Divider Row Styles */
 .divider-row {
     background-color: #F9F9F9;
     font-weight: 600;
@@ -213,13 +249,14 @@ h1 {
     color: #9E9E9E; 
     font-weight: 400;
     margin-left: 8px;
+    font-size: 13px;
 }
 
+/* --- Action Buttons --- */
 .actions-cell {
-    display: flex;
-    gap: 4px;
-    align-items: center;
-    justify-content: flex-end; /* Align icons to the right */
+    /* FIXED: Removed display: flex from the TD to restore table behavior */
+    text-align: right;
+    white-space: nowrap;
 }
   
 .action-btn {
@@ -228,38 +265,46 @@ h1 {
     cursor: pointer;
     font-size: 18px;
     color: var(--color-text-secondary);
-    padding: 8px;
+    padding: 0;
     border-radius: 50%;
     width: 36px;
     height: 36px;
-    display: flex;
+    
+    /* FIXED: Use inline-flex to align buttons inside the cell */
+    display: inline-flex; 
     align-items: center;
     justify-content: center;
     transition: background-color 0.2s;
+    vertical-align: middle;
+    margin-left: 2px;
 }
   
-.action-btn:hover {
-    background-color: var(--color-hover-bg);
-}
-  
-.delete-btn:hover {
-    color: var(--color-error);
-    background-color: rgba(211, 47, 47, 0.1);
+.action-btn:hover { background-color: var(--color-hover-bg); }
+.delete-btn:hover { color: var(--color-error); background-color: rgba(211, 47, 47, 0.1); }
+
+.table-input {
+    width: 90%;
+    padding: 4px 8px;
+    border: 1px solid var(--color-accent);
+    border-radius: 4px;
+    font-size: 13px;
 }
 
-.add-btn {
-    flex-shrink: 0;
-}
-
-/* --- Toggle Switch --- */
+/* ... keep the rest (toggle-switch, snackbar) ... */
 .toggle-switch {
     position: relative;
     display: inline-block;
     width: 36px;
     height: 20px;
     flex-shrink: 0;
+    vertical-align: middle;
 }
-.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-switch input { 
+    opacity: 0; 
+    width: 0; 
+    height: 0;
+    position: absolute;
+}
 .slider {
     position: absolute;
     cursor: pointer;
@@ -288,7 +333,6 @@ input:checked + .slider:before {
     transform: translateX(16px);
 }
 
-/* --- Undo Snackbar --- */
 .undo-snackbar {
     position: fixed;
     bottom: 24px;

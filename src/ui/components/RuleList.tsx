@@ -39,31 +39,45 @@ const DraggableTableRow: React.FC<DraggableTableRowProps> = ({ rule, onDelete, o
   };
 
   const style: React.CSSProperties = {
-    transform: CSS.Transform.toString(transform),
+    transform: CSS.Translate.toString(transform),
     transition,
     zIndex: isDragging ? 100 : 'auto',
   };
   
+  // Common style for the Braille grip handle
+  const gripStyle: React.CSSProperties = {
+      fontSize: '20px',
+      lineHeight: '1',
+      cursor: 'grab'
+  };
+
   if (rule.type === 'divider') {
     return (
       <tr ref={setNodeRef} style={style} {...attributes} className="divider-row">
-        <td><span className="drag-handle" {...listeners}>::</span></td>
+        <td className="drag-cell">
+          <span className="drag-handle" {...listeners} title="Drag to reorder" style={gripStyle}>
+            ⠿
+          </span>
+        </td>
         <td colSpan={4} className="divider-cell" onClick={onToggleCollapse}>
-          <span className={`divider-chevron ${isCollapsed ? 'collapsed' : ''}`}>▼</span>
-          {isEditing ? (
-            <input 
-              type="text" 
-              value={editedFind}
-              onChange={(e) => setEditedFind(e.target.value)}
-              className="table-input"
-              onClick={(e) => e.stopPropagation()}
-            />
-          ) : (
-            <>
-              {rule.find}
-              <span className="rule-count">({ruleCount})</span>
-            </>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+            <span className={`divider-chevron ${isCollapsed ? 'collapsed' : ''}`}>▼</span>
+            {isEditing ? (
+              <input 
+                type="text" 
+                value={editedFind}
+                onChange={(e) => setEditedFind(e.target.value)}
+                className="table-input"
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <>
+                {/* REVERTED: Removed <strong> tags here */}
+                {rule.find}
+                <span className="rule-count">({ruleCount} rules)</span>
+              </>
+            )}
+          </div>
         </td>
         <td className="actions-cell">
             {isEditing ? (
@@ -81,7 +95,11 @@ const DraggableTableRow: React.FC<DraggableTableRowProps> = ({ rule, onDelete, o
 
   return (
     <tr ref={setNodeRef} style={style} {...attributes} className={!rule.enabled ? 'disabled' : ''}>
-      <td><span className="drag-handle" {...listeners}>::</span></td>
+      <td className="drag-cell">
+        <span className="drag-handle" {...listeners} title="Drag to reorder" style={gripStyle}>
+          ⠿
+        </span>
+      </td>
       <td>
         <label className="toggle-switch">
           <input type="checkbox" checked={rule.enabled} onChange={() => onToggle(rule.id)} />

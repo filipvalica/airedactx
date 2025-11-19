@@ -4,10 +4,25 @@ import { RedactionRule, AppSettings } from '../types';
 
 export const DEFAULT_RULES: RedactionRule[] = [];
 
+const DEFAULT_WHITELIST = [
+    "chatgpt.com",
+    "openai.com",
+    "claude.ai",
+    "gemini.google.com",
+    "aistudio.google.com",
+    "copilot.microsoft.com",
+    "bing.com",
+    "perplexity.ai",
+    "x.com",
+    "grok.com",
+    "deepseek.com"
+];
+
 const DEFAULT_SETTINGS: AppSettings = {
-  useAnywhereMode: true,
+  useAnywhereMode: false,
   hoverAreaPosition: 'bottom-right',
   replaceTextUsing: '[[..]]',
+  siteWhitelist: DEFAULT_WHITELIST, // Fixed: Added default value
 };
 
 const RULES_KEY = 'redactionRules';

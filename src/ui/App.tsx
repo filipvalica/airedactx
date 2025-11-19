@@ -159,7 +159,13 @@ function RulesPanel() {
         throw new Error(`Row ${index + 1}: Type must be 'literal', 'regex', or 'divider'.`);
       }
       
-      const findValue = trimQuotes(find);
+      let findValue = trimQuotes(find);
+            
+      // Fix: Strip unsupported (?i) flag if present to prevent crash
+      if (ruleType === 'regex' && findValue.startsWith('(?i)')) {
+          findValue = findValue.substring(4);
+      }
+
       if (ruleType === 'regex' && findValue) {
         try { new RegExp(findValue); } 
         catch (e) { throw new Error(`Row ${index + 1}: Invalid Regex pattern in '${findValue}': ${(e as Error).message}`); }

@@ -59,6 +59,13 @@ export const AddRuleForm: React.FC<AddRuleFormProps> = ({ onAddRule }) => {
           required
           className={regexError ? 'input-error' : ''}
         />
+        {/* NEW: Regex Help Link */}
+        {type === 'regex' && (
+            <div style={{ fontSize: '11px', color: '#666', marginTop: '4px', lineHeight: '1.2' }}>
+                Use <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions" target="_blank" rel="noopener noreferrer" style={{ color: '#0060DF', textDecoration: 'none' }}>JS Regex</a> format.<br/>
+                Test at <a href="https://regex101.com/" target="_blank" rel="noopener noreferrer" style={{ color: '#0060DF', textDecoration: 'none' }}>regex101.com</a>
+            </div>
+        )}
       </div>
       <div className="form-group" style={{ flexBasis: '30%' }}>
         <label htmlFor="rule-replace">Replacement Text</label>
@@ -71,7 +78,7 @@ export const AddRuleForm: React.FC<AddRuleFormProps> = ({ onAddRule }) => {
           disabled={isDivider}
         />
       </div>
-      <button type="submit" className="action-btn add-btn" disabled={!!regexError || !find.trim()} title="Add rule">
+      <button type="submit" className="action-btn add-btn" disabled={!!regexError || !find.trim()} title="Add rule" style={{ marginTop: '24px' }}>
       ➕
       </button>
     </form>
