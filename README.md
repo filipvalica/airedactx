@@ -9,7 +9,7 @@ AIRedactX is a browser extension designed to help users automatically find and r
 * **Configurable Redaction Rules**: Create custom rules to find and replace sensitive text using simple literal matching or powerful regular expressions (Regex).
 * **On-Page Redaction Controls**: A "Redact" button appears inside active text areas for quick, one-click redaction.
 * **Context Menu Action**: Right-click any text field and select "Redact this field" for easy access.
-* **Rule Management**: Enable/disable rules, drag-and-drop to reorder priority, and import/export your entire ruleset as a `.csv` file.
+* **Rule Management**: Enable/disable rules, drag-and-drop to reorder priority, and import/export your entire ruleset as a `.tsv` file.
 * **Customizable Settings**: Choose your preferred redaction style (e.g., `[[..]]`, `{{..}}`) and the position of the on-page controls.
 
 ## Technology Stack
@@ -77,7 +77,7 @@ The project includes separate build commands for Firefox and Chrome. The build a
 
 ### Development Workflow
 
-After making changes to the source code, simply run the appropriate build command (`npm run build:firefox` or `npm run build:chrome`) and then click the **Reload** button next to the extension's entry in `about:debugging` (Firefox) or `chrome://extensions` (Chrome). You do not need to remove and re-add the extension each time.
+After making changes to the source code, simply run the appropriate build command (`npm run build:firefox` or `npm run build:chrome`) and then click the **Reload** button next to the extension's entry in `about:debugging` (Firefox) or `chrome/extensions` (Chrome). You do not need to remove and re-add the extension each time.
 
 ## License
 
