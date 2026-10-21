@@ -1,33 +1,12 @@
-/* src/content/injected-styles.css */
-.airedactx-button-panel {
-  position: absolute;
-  z-index: 2147483647;
-}
-
-.airedactx-button {
-  background-color: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(0, 0, 0, 0.2);
-  border-radius: 50%;
-  width: 40px;
-  height: 40px;
-  padding: 8px;
-  cursor: pointer;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.airedactx-button:hover {
-  background-color: #FFFFFF;
-}
-
-.airedactx-button img {
-  width: 24px;
-  height: 24px;
-}
-
-.airedactx-redacted-field {
+/* src/content/injected-styles.css
+   Loaded into every page by the manifest (and into shadow roots on demand).
+   Only the post-redaction highlight lives here; the button has its own shadow root.
+   The content script sets data-airedactx-highlight to the user's Highlight setting. */
+.airedactx-redacted-field[data-airedactx-highlight='amber'] {
   background-color: #fff8e1 !important;
   color: #212121 !important;
+}
+.airedactx-redacted-field[data-airedactx-highlight='outline'] {
+  outline: 2px solid #ff6a00 !important;
+  outline-offset: -2px !important;
 }

@@ -1,67 +1,40 @@
 // vite.config.ts
+// Builds the options page (index.html + React bundle) and assembles the rest of dist/:
+// the browser-specific manifest (version taken from package.json so there is one source of
+// truth), the icon, the content stylesheet and the bundled default rules.
+// background.js and content.js are built by their own configs because Vite's library mode
+// cannot emit two IIFE entries from one config.
+
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { resolve } from 'path';
-import { copyFileSync, mkdirSync, existsSync } from 'fs';
+import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 
-// This config is now ONLY for the popup UI and manifest/icon copying.
+const root = __dirname;
+const dist = resolve(root, 'dist');
+
+const assembleExtension = () => {
+  const browser = process.env.BROWSER === 'chrome' ? 'chrome' : 'firefox';
+  const { version } = JSON.parse(readFileSync(resolve(root, 'package.json'), 'utf8'));
+  const manifest = JSON.parse(readFileSync(resolve(root, 'public', `manifest.${browser}.json`), 'utf8'));
+  manifest.version = version;
+
+  mkdirSync(resolve(dist, 'icons'), { recursive: true });
+  writeFileSync(resolve(dist, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
+  copyFileSync(resolve(root, 'public/icons/icon-48.svg'), resolve(dist, 'icons/icon-48.svg'));
+  copyFileSync(resolve(root, 'src/content/injected-styles.css'), resolve(dist, 'injected-styles.css'));
+  copyFileSync(resolve(root, 'airedactx_rules.tsv'), resolve(dist, 'airedactx_rules.tsv'));
+};
+
 export default defineConfig({
-  plugins: [
-    react(),
-    {
-      name: 'copy-files',
-      closeBundle() {
-        const browser = process.env.BROWSER || 'firefox';
-        const manifestSource = resolve(__dirname, 'public', `manifest.${browser}.json`);
-        const distDir = resolve(__dirname, 'dist');
-
-        if (!existsSync(distDir)) {
-          mkdirSync(distDir, { recursive: true });
-        }
-        copyFileSync(manifestSource, resolve(distDir, 'manifest.json'));
-        
-        // Handle icons
-        const iconsDir = resolve(distDir, 'icons');
-        if (!existsSync(iconsDir)) {
-          mkdirSync(iconsDir, { recursive: true });
-        }
-        try {
-          copyFileSync(
-            resolve(__dirname, 'public/icons/icon-48.svg'),
-            resolve(iconsDir, 'icon-48.svg')
-          );
-        } catch (e) {
-          console.warn('Icon file not found.');
-        }
-
-        // *** CRITICAL FIX: COPY THE CSS FILE ***
-        try {
-          copyFileSync(
-            resolve(__dirname, 'src/content/injected-styles.css'),
-            resolve(distDir, 'injected-styles.css') // Copy it to the root of dist
-          );
-        } catch (e) {
-          console.error('Failed to copy injected-styles.css', e);
-        }
-
-        // *** ADDED: COPY THE MASTER RULES TSV FILE ***
-        try {
-          copyFileSync(
-            resolve(__dirname, 'airedactx_rules.tsv'),
-            resolve(distDir, 'airedactx_rules.tsv') 
-          );
-        } catch (e) {
-          console.error('Failed to copy airedactx_rules.tsv', e);
-        }
-      }
-    }
-  ],
-  build: {
-    outDir: resolve(__dirname, 'dist'),
-    emptyOutDir: true, 
-    rollupOptions: {
-      input: resolve(__dirname, 'index.html'),
-    },
-  },
+  plugins: [react(), { name: 'assemble-extension', closeBundle: assembleExtension }],
   publicDir: false,
+  build: {
+    outDir: dist,
+    emptyOutDir: true,
+    // The preload polyfill adds a fetch() call to the options bundle; the page has one script
+    // and no dynamic imports, so it is dead weight and muddies the "no network" claim.
+    modulePreload: { polyfill: false },
+    rollupOptions: { input: resolve(root, 'index.html') },
+  },
 });

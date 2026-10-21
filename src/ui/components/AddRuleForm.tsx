@@ -1,85 +1,122 @@
 // src/ui/components/AddRuleForm.tsx
-import React, { useState, useEffect } from 'react';
-import { RedactionRule } from '../../types';
+import React, { useState } from 'react';
+import { RedactionRule, RuleType } from '../../types';
+import { normalizePattern, patternError } from '../../core/engine';
+import { PlusIcon } from './Icons';
+
+/** What the form produces: everything the caller needs to build a rule except id and enabled. */
+export type NewRule = Pick<RedactionRule, 'type' | 'find' | 'replace' | 'caseInsensitive'>;
 
 interface AddRuleFormProps {
-  onAddRule: (rule: Omit<RedactionRule, 'id' | 'enabled'>) => void;
+  /** Returns an error message to show (for example a duplicate pattern), or null on success. */
+  onAddRule: (rule: NewRule) => string | null;
 }
 
 export const AddRuleForm: React.FC<AddRuleFormProps> = ({ onAddRule }) => {
   const [find, setFind] = useState('');
   const [replace, setReplace] = useState('');
-  const [type, setType] = useState<'literal' | 'regex' | 'divider'>('literal');
-  const [regexError, setRegexError] = useState<string | null>(null);
+  const [type, setType] = useState<RuleType>('literal');
+  const [ignoreCase, setIgnoreCase] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (type === 'regex' && find.trim() !== '') {
-      try {
-        new RegExp(find);
-        setRegexError(null);
-      } catch (e) {
-        setRegexError('Invalid Regex pattern');
-      }
-    } else {
-      setRegexError(null);
-    }
-  }, [find, type]);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (find.trim() && !regexError) {
-      onAddRule({ find, replace, type });
-      setFind('');
-      setReplace('');
-    }
-  };
-
+  const normalized = normalizePattern(type, find, ignoreCase);
+  const liveError = find.trim() ? patternError(type, normalized.find, normalized.caseInsensitive) : null;
   const isDivider = type === 'divider';
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!find.trim() || liveError) return;
+    const error = onAddRule({
+      type,
+      find: normalized.find,
+      replace: replace.trim(),
+      ...(normalized.caseInsensitive ? { caseInsensitive: true } : {}),
+    });
+    setSubmitError(error);
+    if (error) return;
+    setFind('');
+    setReplace('');
+    setIgnoreCase(false);
+  };
 
   return (
     <form onSubmit={handleSubmit} className="add-rule-form">
-      <div className="form-group" style={{ flexBasis: '150px', flexGrow: 0 }}>
+      <div className="form-group form-group-type">
         <label htmlFor="rule-type">Type</label>
-        <select id="rule-type" value={type} onChange={(e) => setType(e.target.value as any)}>
+        <select id="rule-type" value={type} onChange={(e) => setType(e.target.value as RuleType)}>
           <option value="literal">Literal</option>
           <option value="regex">Regex</option>
           <option value="divider">Divider</option>
         </select>
       </div>
-      <div className="form-group" style={{ flexBasis: '30%' }}>
-        <label htmlFor="rule-find">
-          {isDivider ? 'Divider Title' : 'Match Pattern'}
-        </label>
+      <div className="form-group form-group-wide">
+        <label htmlFor="rule-find">{isDivider ? 'Divider Title' : 'Match Pattern'}</label>
         <input
           id="rule-find"
           type="text"
-          placeholder={isDivider ? "e.g., Personal Info" : "John Doe"}
+          placeholder={isDivider ? 'e.g. Personal' : type === 'regex' ? '\\b\\d{3}-\\d{4}\\b' : 'John Doe'}
           value={find}
-          onChange={(e) => setFind(e.target.value)}
+          onChange={(e) => {
+            setFind(e.target.value);
+            setSubmitError(null);
+          }}
           required
-          className={regexError ? 'input-error' : ''}
+          aria-invalid={!!liveError}
+          aria-describedby="rule-find-help"
+          className={liveError ? 'input-error' : ''}
         />
-        {/* NEW: Regex Help Link */}
         {type === 'regex' && (
-            <div style={{ fontSize: '11px', color: '#666', marginTop: '4px', lineHeight: '1.2' }}>
-                Use <a href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions" target="_blank" rel="noopener noreferrer" style={{ color: '#0060DF', textDecoration: 'none' }}>JS Regex</a> format.<br/>
-                Test at <a href="https://regex101.com/" target="_blank" rel="noopener noreferrer" style={{ color: '#0060DF', textDecoration: 'none' }}>regex101.com</a>
-            </div>
+          <div id="rule-find-help" className="field-help">
+            <label className="checkbox-label">
+              <input
+                type="checkbox"
+                checked={normalized.caseInsensitive}
+                onChange={(e) => setIgnoreCase(e.target.checked)}
+              />
+              Ignore case
+            </label>
+            <span>
+              JavaScript syntax (
+              <a
+                href="https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Regular_expressions"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                reference
+              </a>
+              ). Test at{' '}
+              <a href="https://regex101.com/?flavor=javascript" target="_blank" rel="noopener noreferrer">
+                regex101.com
+              </a>
+              .
+            </span>
+          </div>
+        )}
+        {(liveError || submitError) && (
+          <p className="field-error" role="alert">
+            {liveError ?? submitError}
+          </p>
         )}
       </div>
-      <div className="form-group" style={{ flexBasis: '30%' }}>
-        <label htmlFor="rule-replace">Replacement Text</label>
+      <div className="form-group form-group-wide">
+        <label htmlFor="rule-replace">{isDivider ? 'Replacement' : 'Placeholder Label'}</label>
         <input
           id="rule-replace"
           type="text"
-          placeholder={isDivider ? '(not used)' : 'REDACTED_NAME'}
+          placeholder={isDivider ? '(not used)' : 'Email'}
           value={replace}
           onChange={(e) => setReplace(e.target.value)}
           disabled={isDivider}
         />
       </div>
-      <button type="submit" className="action-btn add-btn" disabled={!!regexError || !find.trim()} title="Add rule" style={{ marginTop: '24px' }}>
-      ➕
+      <button
+        type="submit"
+        className="action-btn add-btn"
+        disabled={!!liveError || !find.trim()}
+        title="Add rule"
+        aria-label="Add rule"
+      >
+        <PlusIcon size={22} />
       </button>
     </form>
   );

@@ -1,116 +1,56 @@
 # AIRedactX Style Guide
 
-## Layout
+This describes the options page as built. Every value below is a CSS custom property in `src/ui/index.css`; change the token, not the call site. The page sets `color-scheme: light dark` and swaps the token values in a `prefers-color-scheme: dark` block, so there is no theme toggle and no second stylesheet.
 
-* **Grid:** 8px base unit
-* **Section padding:** 24px top/bottom, 16px sides
-* **Row height:**
+## Color tokens
 
-  * Table rows: 40–44px
-  * Form inputs/buttons: 40px
-* **Interactive target:** Minimum 44px
-* **Cards/containers:** Rounded corners (8px), subtle shadow (Material 3 style)
+| Token | Light | Dark | Used for |
+|---|---|---|---|
+| `--color-bg` | #FAFAFA | #1C1B22 | Page background |
+| `--color-surface` | #FFFFFF | #2B2A33 | Panels, table rows, inputs, dialog |
+| `--color-surface-raised` | #F3F3F3 | #35343D | Divider rows, literal tag |
+| `--color-border` | #E0E0E0 | #4A4955 | Borders and table rules |
+| `--color-text-primary` | #212121 | #FBFBFE | Body text |
+| `--color-text-secondary` | #616161 | #C8C7D0 | Labels, helper text, divider titles |
+| `--color-text-disabled` | #9E9E9E | #8A8994 | Switched-off rules, rule counts, idle drag handle |
+| `--color-accent` | #FF6A00 | #FF6A00 | Fills and outlines only: toggle on, focus ring, tab underline, primary dialog button |
+| `--color-accent-text` | #B84A00 | #FF8A3D | Accent as text: selected tab, regex tag, Add button, snackbar action |
+| `--color-accent-soft` | #FFF1E6 | #4A2A14 | Regex and flag tag background |
+| `--color-info-text` | #0050B3 | #8AB4F8 | Divider tag text |
+| `--color-info-soft` | #E6F0FF | #1F2E4A | Divider tag background |
+| `--color-link` | #0050B3 | #8AB4F8 | Links in helper text |
+| `--color-error` | #D32F2F | #FF6B6B | Validation messages, delete hover, danger dialog button |
+| `--color-hover-bg` | rgba(0,0,0,.04) | rgba(255,255,255,.08) | Hover on rows, buttons, handles |
+| `--color-switch-off` | #BDBDBD | #5C5B66 | Toggle track when off |
+| `--color-snackbar-bg` / `-text` | #212121 / #FFFFFF | #FBFBFE / #1C1B22 | Undo snackbar |
 
----
+The logo orange (#FF6A00) is about 2.9:1 against white, so it is never used for text. Text that needs the accent uses `--color-accent-text`, which clears 4.5:1 on both surfaces. If you add a text color, check it against `--color-surface` in both schemes before committing.
 
-## Typography
+## Layout and type
 
-* **Font family:** System sans-serif
-
-  * macOS: SF Pro
-  * Windows: Segoe UI
-  * Linux: Ubuntu/Cantarell
-
-**Hierarchy**
-
-* **App Title / Page Title:** 20–22px, semibold, #212121
-* **Section Titles:** 16–18px, semibold, #212121
-* **Group Headers (collapsible dividers):** 14px, semibold, #616161
-* **Field Labels:** 14px, medium, #616161
-* **Body Text (instructions, table content):** 14px, regular, #212121
-* **Secondary / Helper Text:** 13–14px, regular, #616161
-* **Disabled Text:** 14px, #9E9E9E
-
----
-
-## Colors
-
-* **Background:** #FAFAFA
-* **Card/Table:** #FFFFFF
-* **Dividers:** #E0E0E0
-* **Primary Accent:** #FF6A00 (orange from logo, used for toggles ON, buttons, focus outlines)
-* **Secondary Accent:** #0060DF (blue, reserved for links or less frequent states)
-* **Hover State:** rgba(0,0,0,0.04)
-* **Focus Outline:** 2px solid #FF6A00
-* **Error:** #D32F2F
-
----
+* Base unit `--spacing-unit` = 8px. Panels pad 24px, rows pad 16px top and bottom.
+* Page is a fixed 800px column (`.app-container`); the options tab is never narrower.
+* System font stack. Page title 22px semibold, panel heading 18px semibold, tab 16px semibold, labels and body 14px, helper text and tags 12px to 13px, monospace at 13px for patterns and the site list.
+* Form inputs and panel buttons are 40px tall; dialog buttons and the round action buttons are 36px. Radius is 4px, panels and the dialog use 8px.
+* Focus is `:focus-visible` only: 3px accent outline, 2px offset. Toggles get a two-ring box shadow instead so the ring follows the pill.
 
 ## Components
 
-### Buttons
-
-* **Primary:** background #FF6A00, text #FFFFFF
-* **Secondary:** transparent background, border #E0E0E0, text #212121
-* **Hover:** background darkens by 10%
-
-### Inputs
-
-* Height: 40px
-* Border: 1px solid #E0E0E0
-* Focus: 2px solid #FF6A00, outline none
-* Label: 14px medium #616161 above field
-* Helper text (optional): 13px #616161 below
-
-### Tables (Rules List)
-
-* Row height: 40–44px
-* Row background: #FFFFFF
-* Zebra striping: alternate row #F9F9F9
-* Hover: background rgba(0,0,0,0.04)
-* Column alignment: left for labels, right for actions
-* Header row: sticky, with bottom border #E0E0E0
-
-### Toggles
-
-* Role: switch, aria-checked true/false
-* **ON:** track #FF6A00, white thumb
-* **OFF:** #E0E0E0 track, gray thumb
-
-### Group Dividers (Collapsible Sections)
-
-* Background: #F9F9F9
-* Label: 14px, semibold, #616161
-* Chevron icon left, rotates on expand/collapse
-* Accent color: #FF6A00 on active state
-* Optional rule count displayed inline, gray (#616161)
-
-### Tags for Rule Type
-
-* **Literal:** neutral gray pill (#F0F0F0 background, #212121 text)
-* **Regex:** orange pill (#FFF1E6 background, #FF6A00 text)
-* **Divider:** neutral blue pill (#E6F0FF background, #0060DF text)
-
-### Actions
-
-* Edit: pencil icon, ghost style (gray until hover)
-* Delete: trash icon, red hover (#D32F2F)
-* On delete: snackbar with undo (bottom left, dark background #333, white text, action #FF6A00)
-
----
+* **Tabs.** Arrow keys move between tabs, roving `tabIndex`. Selected tab: accent-text color plus a 3px accent underline.
+* **Toggle switch.** 36 by 20px pill, `role` from the native checkbox, track `--color-switch-off` when off and `--color-accent` when on, white thumb.
+* **Rules table.** Fixed layout; columns drag 40px, status 60px, type 100px, actions 110px, find and replace share the rest. Rows are `--color-surface` with a bottom border; no zebra striping. A switched-off rule mutes its text and tag to `--color-text-disabled`. Divider rows use `--color-surface-raised` with a chevron that rotates 90 degrees when collapsed and an inline rule count.
+* **Tags.** Uppercase 12px pills: `.tag-literal` (raised surface), `.tag-regex` (accent soft and accent text), `.tag-divider` (info soft and info text). `.tag-flag` is the same accent pair in monospace, used for the `i` ignore-case flag and the validator name.
+* **Icons.** Inline SVG from `components/Icons.tsx`, 24px viewBox, stroked in `currentColor`, `aria-hidden`. The button that wraps an icon carries the `aria-label`. No emoji anywhere.
+* **Action buttons.** 36px circular ghost buttons in `--color-text-secondary`; hover shows `--color-hover-bg`; delete hover turns `--color-error` on a 10% red wash.
+* **Drag handle.** Grip icon in `--color-text-disabled`, `cursor: grab`, primary text color on hover. It is the only element that carries the dnd-kit listeners, so the row itself stays selectable and the handle works with the keyboard (space, arrows, space).
+* **Dialog.** The native `<dialog>` via `components/Dialog.tsx`, 440px max, surface background, dark 45% backdrop. Buttons sit right-aligned: plain, `.primary` (accent fill, white text) and `.danger` (error border, fills on hover). Confirmations open with focus on Cancel so Enter never destroys anything.
+* **Snackbar.** Fixed, bottom center, inverted surface, uppercase accent-text action. Deleting a rule always shows it with Undo.
+* **Status line.** Settings feedback is a single `.status-message` line in accent text under the panel, cleared on a timer.
 
 ## Accessibility
 
-* Contrast: all text ≥ 4.5:1 against background
-* Keyboard: tab through inputs, space/enter toggles switches
-* Screen reader labels for all controls (“Toggle rule on/off”, “Edit rule”, etc.)
-* Collapsible groups announce expand/collapse state
-
----
-
-## Micro-Interactions
-
-* Drag handle (⋮⋮) for reordering rules and groups, cursor changes to grab.
-* Smooth hover highlight on rows.
-* Collapsed groups hide children but preserve order/state.
-* Deletion always triggers snackbar with undo.
+* Every text and surface pair clears WCAG AA 4.5:1 in both schemes.
+* Every control is reachable by Tab; switches and buttons answer to Space and Enter; rules edit inline with Enter to save and Escape to cancel.
+* Every icon button has an `aria-label`; the enable toggle's label names the rule.
+* The drag handle announces moves through dnd-kit's live region.
+* Known gap: a divider collapses by clicking its title cell, which is not focusable and sets no `aria-expanded`. Fix is a button inside the cell.

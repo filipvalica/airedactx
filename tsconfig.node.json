@@ -1,4 +1,3 @@
-// tsconfig.node.json
 {
   "compilerOptions": {
     "composite": true,
@@ -8,5 +7,5 @@
     "allowSyntheticDefaultImports": true,
     "types": ["node"]
   },
-  "include": ["vite.config.ts"]
+  "include": ["vite.config.ts", "vite.background.config.ts", "vite.content.config.ts"]
 }

@@ -1,89 +1,86 @@
 // src/content/ui-injector.ts
-/// <reference lib="dom" />
+// The floating redact button. It lives in its own closed shadow root so page CSS cannot restyle
+// it, and uses fixed positioning from the field's viewport rect so it stays put inside scrolling
+// composers. One panel per frame, created on first use and reused.
 
 import browser from 'webextension-polyfill';
-import { AppSettings } from '../types';
+import { AppSettings, HoverAreaPosition } from '../types';
 
-let buttonPanel: HTMLDivElement | null = null;
+const EDGE_OFFSET_PX = 8;
 
-const createButtonPanel = (onRedact: () => void): HTMLDivElement => {
-    const panel = document.createElement('div');
-    panel.className = 'airedactx-button-panel';
-    panel.style.visibility = 'hidden'; 
-    panel.style.position = 'absolute'; 
-    panel.style.zIndex = '2147483647';
+const PANEL_CSS = `
+  :host { all: initial; position: fixed; z-index: 2147483647; display: none; }
+  :host([data-visible]) { display: block; }
+  button {
+    all: initial;
+    box-sizing: border-box;
+    width: 40px; height: 40px; padding: 8px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255, 255, 255, 0.95);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    border-radius: 50%;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+  }
+  button:hover { background: #ffffff; }
+  img { width: 24px; height: 24px; display: block; }
+`;
 
-    const redactButton = document.createElement('button');
-    redactButton.className = 'airedactx-button';
-    
-    const icon = document.createElement('img');
-    icon.src = browser.runtime.getURL('icons/icon-48.svg');
-    redactButton.appendChild(icon);
-    
-    panel.appendChild(redactButton);
+let host: HTMLElement | null = null;
+let target: HTMLElement | null = null;
+let position: HoverAreaPosition = 'bottom-right';
 
-    redactButton.addEventListener('mousedown', (e: MouseEvent) => {
-        e.preventDefault(); 
-        onRedact();
-    });
+const createPanel = (onRedact: () => void): HTMLElement => {
+  const element = document.createElement('div');
+  element.setAttribute('data-airedactx', '');
+  const shadow = element.attachShadow({ mode: 'closed' });
 
-    return panel;
+  const style = document.createElement('style');
+  style.textContent = PANEL_CSS;
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.title = 'Redact this field (AIRedactX)';
+  button.setAttribute('aria-label', 'Redact this field');
+  const icon = document.createElement('img');
+  icon.src = browser.runtime.getURL('icons/icon-48.svg');
+  icon.alt = '';
+  button.appendChild(icon);
+
+  // mousedown + preventDefault keeps focus in the field, so focusout never fires.
+  button.addEventListener('mousedown', (event) => {
+    event.preventDefault();
+    onRedact();
+  });
+
+  shadow.append(style, button);
+  return element;
 };
 
-const positionPanel = (target: HTMLElement, position: AppSettings['hoverAreaPosition']) => {
-    if (!buttonPanel) return;
-
-    buttonPanel.style.opacity = '0';
-    buttonPanel.style.visibility = 'visible';
-    buttonPanel.style.top = '-9999px';
-    buttonPanel.style.left = '-9999px';
-
-    const targetRect = target.getBoundingClientRect();
-    const panelRect = buttonPanel.getBoundingClientRect(); 
-    const scrollX = window.scrollX;
-    const scrollY = window.scrollY;
-    const offset = 8;
-
-    let top = 0;
-    let left = 0;
-
-    switch (position) {
-        case 'top-left':
-            top = targetRect.top + scrollY + offset;
-            left = targetRect.left + scrollX + offset;
-            break;
-        case 'top-right':
-            top = targetRect.top + scrollY + offset;
-            left = targetRect.right + scrollX - panelRect.width - offset;
-            break;
-        case 'bottom-left':
-            top = targetRect.bottom + scrollY - panelRect.height - offset;
-            left = targetRect.left + scrollX + offset;
-            break;
-        case 'bottom-right':
-        default:
-            top = targetRect.bottom + scrollY - panelRect.height - offset;
-            left = targetRect.right + scrollX - panelRect.width - offset;
-            break;
-    }
-
-    buttonPanel.style.top = `${top}px`;
-    buttonPanel.style.left = `${left}px`;
-    
-    buttonPanel.style.opacity = '1';
+const reposition = () => {
+  if (!host || !target) return;
+  const rect = target.getBoundingClientRect();
+  const panel = host.getBoundingClientRect();
+  const top = position.startsWith('top') ? rect.top + EDGE_OFFSET_PX : rect.bottom - panel.height - EDGE_OFFSET_PX;
+  const left = position.endsWith('left') ? rect.left + EDGE_OFFSET_PX : rect.right - panel.width - EDGE_OFFSET_PX;
+  host.style.top = `${Math.round(top)}px`;
+  host.style.left = `${Math.round(left)}px`;
 };
 
-export const showRedactionUI = (targetElement: HTMLElement, settings: AppSettings, onRedact: () => void) => {
-    if (!buttonPanel) {
-        buttonPanel = createButtonPanel(onRedact);
-        document.body.appendChild(buttonPanel);
-    }
-    
-    positionPanel(targetElement, settings.hoverAreaPosition);
+export const showRedactionUI = (field: HTMLElement, settings: AppSettings, onRedact: () => void) => {
+  if (!host) {
+    host = createPanel(onRedact);
+    document.documentElement.appendChild(host);
+    window.addEventListener('scroll', reposition, { capture: true, passive: true });
+    window.addEventListener('resize', reposition, { passive: true });
+  }
+  target = field;
+  position = settings.buttonPosition;
+  host.setAttribute('data-visible', '');
+  reposition();
 };
 
 export const hideRedactionUI = () => {
-    if (buttonPanel) {
-        buttonPanel.style.visibility = 'hidden';
-    }
+  host?.removeAttribute('data-visible');
+  target = null;
 };

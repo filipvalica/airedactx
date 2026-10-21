@@ -1,148 +1,153 @@
 // src/content/injector.ts
+// Content script, injected on every page. It stays passive until the user acts: it never reads
+// a field until a redact button or the context menu is used, and it never sends anything anywhere.
+
 import browser from 'webextension-polyfill';
 import { getRules, getSettings } from '../storage/storageManager';
 import { performRedaction } from '../core/engine';
 import { showRedactionUI, hideRedactionUI } from './ui-injector';
-import { AppSettings } from '../types';
+import { REDACT_COMMAND } from '../types';
+import { isPageAllowed } from '../core/siteAllow';
 
-let currentActiveElement: HTMLElement | null = null;
-let hideTimeoutId: number | null = null;
+const REDACTED_CLASS = 'airedactx-redacted-field';
+const HIGHLIGHT_ATTR = 'data-airedactx-highlight';
+const TEXT_INPUT_TYPES = ['text', 'email', 'search', 'tel', 'url'];
+const SHOW_DELAY_MS = 100;
+const HIDE_DELAY_MS = 50;
 
-// Helper: Check if current page is allowed based on Whitelist/UseAnywhere
-const isPageAllowed = (settings: AppSettings): boolean => {
-  if (settings.useAnywhereMode) return true;
-  
-  const currentHost = window.location.hostname.toLowerCase();
-  const whitelist = settings.siteWhitelist || [];
-  
-  // Check if hostname matches or ends with whitelisted domain
-  return whitelist.some((domain: string) => {
-      const cleanDomain = domain.toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
-      return currentHost === cleanDomain || currentHost.endsWith('.' + cleanDomain);
-  });
+declare global {
+  interface Window {
+    __airedactxLoaded?: boolean;
+  }
+}
+
+const isTextField = (el: Element): el is HTMLInputElement | HTMLTextAreaElement =>
+  el instanceof HTMLTextAreaElement ||
+  (el instanceof HTMLInputElement && TEXT_INPUT_TYPES.includes(el.type.toLowerCase()));
+
+const isEditable = (el: EventTarget | null): el is HTMLElement =>
+  el instanceof HTMLElement && (isTextField(el) || el.isContentEditable || el.getAttribute('role') === 'textbox');
+
+/** document.activeElement, following open shadow roots down to the real focused element. */
+const getDeepActiveElement = (): Element | null => {
+  let active = document.activeElement;
+  while (active?.shadowRoot?.activeElement) active = active.shadowRoot.activeElement;
+  return active;
 };
 
-// Helper: Check if element is an editable text field
-function isEditable(el: EventTarget | null): el is HTMLElement {
-  if (!el || !(el instanceof HTMLElement)) return false;
-  const tagName = el.tagName.toUpperCase();
-  const isTextInput = tagName === 'INPUT' && ['text', 'email', 'password', 'search', 'tel', 'url'].includes((el as HTMLInputElement).type.toLowerCase());
-  return tagName === 'TEXTAREA' || el.isContentEditable || isTextInput || el.getAttribute('role') === 'textbox';
-}
+/**
+ * Write a value the way a user typing would, so page frameworks notice it.
+ * React overrides the value setter on inputs, so a plain `el.value = x` is invisible to it;
+ * going through the prototype setter and firing an InputEvent is the documented workaround.
+ */
+const setFieldValue = (el: HTMLInputElement | HTMLTextAreaElement, value: string) => {
+  const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
+  const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+  if (setter) setter.call(el, value);
+  else el.value = value;
+  el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: value }));
+  el.dispatchEvent(new Event('change', { bubbles: true }));
+};
 
-// Helper: Get deep active element (piercing Shadow DOM)
-function getActiveElement(root: Document | ShadowRoot = document): Element | null {
-    let activeEl = root.activeElement;
-    if (!activeEl) return null;
-    while (activeEl && activeEl.shadowRoot) {
-        const nextEl: Element | null = activeEl.shadowRoot.activeElement;
-        if (nextEl) {
-            activeEl = nextEl;
-        } else {
-            break;
-        }
-    }
-    return activeEl;
-}
+/**
+ * Rich editors (ProseMirror, Lexical, Quill: ChatGPT, Claude, Gemini) keep their own model and
+ * ignore direct DOM writes. Replacing the selection with execCommand goes through their input
+ * handling. Fall back to a direct write for plain contenteditable elements.
+ */
+const setEditableText = (el: HTMLElement, value: string) => {
+  el.focus();
+  const selection = window.getSelection();
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  selection?.removeAllRanges();
+  selection?.addRange(range);
 
-const handleRedaction = async (element: HTMLElement | null) => {
-  if (!element) {
-    console.error("AIRedactX: Redaction called with no active element.");
+  const inserted = document.execCommand('insertText', false, value);
+  // Editors render inserted newlines as blocks or <br>, so innerText can differ from the value
+  // in whitespace only. Compare with whitespace collapsed; a false mismatch here would run the
+  // direct write that desyncs rich editors.
+  const collapse = (text: string) => text.replace(/\s+/g, ' ').trim();
+  if (!inserted || collapse(el.innerText ?? el.textContent ?? '') !== collapse(value)) {
+    el.innerText = value;
+    el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: value }));
+  }
+};
+
+/** The highlight class is page CSS; a field inside a shadow root needs the stylesheet there too. */
+const ensureHighlightStyles = (el: HTMLElement) => {
+  const root = el.getRootNode();
+  if (!(root instanceof ShadowRoot) || root.querySelector('#airedactx-styles')) return;
+  const link = document.createElement('link');
+  link.id = 'airedactx-styles';
+  link.rel = 'stylesheet';
+  link.href = browser.runtime.getURL('injected-styles.css');
+  root.appendChild(link);
+};
+
+const redactElement = async (el: HTMLElement | null) => {
+  if (!el) return;
+  const [rules, settings] = await Promise.all([getRules(), getSettings()]);
+
+  if (isTextField(el)) {
+    setFieldValue(el, performRedaction(el.value, rules, settings));
+  } else if (el.isContentEditable) {
+    setEditableText(el, performRedaction(el.innerText ?? el.textContent ?? '', rules, settings));
+  } else {
     return;
   }
 
-  // Inject styles into Shadow DOM if needed
-  const rootNode = element.getRootNode();
-  if (rootNode instanceof ShadowRoot) {
-    if (!rootNode.querySelector('#airedactx-styles')) {
-      const styleLink = document.createElement('link');
-      styleLink.id = 'airedactx-styles';
-      styleLink.rel = 'stylesheet';
-      styleLink.href = browser.runtime.getURL('injected-styles.css');
-      rootNode.appendChild(styleLink);
-    }
-  }
-
-  const rules = await getRules();
-  const settings = await getSettings();
-  let textToRedact = '';
-
-  if (element.tagName === 'TEXTAREA' || element.tagName === 'INPUT') {
-    textToRedact = (element as HTMLTextAreaElement | HTMLInputElement).value;
-  } else if (element.isContentEditable) {
-    textToRedact = element.innerText || element.textContent || '';
-  }
-
-  const redactedText = performRedaction(textToRedact, rules, settings);
-
-  if (element.tagName === 'TEXTAREA' || element.tagName === 'INPUT') {
-    (element as HTMLTextAreaElement | HTMLInputElement).value = redactedText;
-  } else if (element.isContentEditable) {
-    element.innerText = redactedText;
-  }
-  
-  // Trigger input events so frameworks (React/Angular) detect the change
-  element.classList.add('airedactx-redacted-field');
-  element.dispatchEvent(new Event('input', { bubbles: true, cancelable: true }));
-  element.dispatchEvent(new Event('change', { bubbles: true, cancelable: true }));
+  if (settings.highlightStyle === 'none') return;
+  ensureHighlightStyles(el);
+  el.setAttribute(HIGHLIGHT_ATTR, settings.highlightStyle);
+  el.classList.add(REDACTED_CLASS);
 };
 
-// Main Initialization
-const init = async () => {
-  // 1. Enable Context Menu Redaction Globally
-  // This listener is added before checking the whitelist so it works everywhere.
-  browser.runtime.onMessage.addListener(async (message: any) => {
-    if (message.command === 'redact-from-context-menu') {
-      const activeElement = getActiveElement() as HTMLElement;
-      if (activeElement && isEditable(activeElement)) {
-        handleRedaction(activeElement);
-      }
-    }
+const init = () => {
+  // Guard against double injection (manifest plus the background's executeScript fallback).
+  if (window.__airedactxLoaded) return;
+  window.__airedactxLoaded = true;
+
+  browser.runtime.onMessage.addListener((message: unknown) => {
+    if ((message as { command?: string })?.command !== REDACT_COMMAND) return;
+    const active = getDeepActiveElement();
+    if (isEditable(active)) void redactElement(active);
   });
 
-  // 2. Check settings for Automatic UI injection (Hover Button)
-  const settings = await getSettings();
-  
-  // STOP HERE if page is not allowed for the automatic UI
-  if (!isPageAllowed(settings)) {
-      return; 
-  }
+  let focused: HTMLElement | null = null;
+  let hideTimer: number | undefined;
 
-  // 3. Only attach Focus/Hover listeners if the site is allowed
-  if (!(window as any).hasAIRedactXListeners) {
-    (window as any).hasAIRedactXListeners = true;
+  document.addEventListener(
+    'focusin',
+    (event) => {
+      window.clearTimeout(hideTimer);
+      const target = event.composedPath()[0];
+      if (!isEditable(target)) return;
+      target.classList.remove(REDACTED_CLASS);
+      target.removeAttribute(HIGHLIGHT_ATTR);
+      focused = target;
 
-    document.addEventListener('focusin', async (event) => {
-      if (hideTimeoutId) clearTimeout(hideTimeoutId);
+      // Settings are read on every focus so the allowed list and button position apply
+      // without a page reload.
+      window.setTimeout(async () => {
+        if (focused !== target) return;
+        const settings = await getSettings();
+        if (!isPageAllowed(settings, window.location.hostname)) return;
+        showRedactionUI(target, settings, () => void redactElement(focused));
+      }, SHOW_DELAY_MS);
+    },
+    true,
+  );
 
-      const target = event.composedPath()[0] as HTMLElement;
-
-      if (target.classList.contains('airedactx-redacted-field')) {
-          target.classList.remove('airedactx-redacted-field');
-      }
-
-      if (isEditable(target)) {
-        currentActiveElement = target;
-        setTimeout(async () => {
-          if (currentActiveElement === target) {
-            // Re-fetch settings to ensure we have latest config (e.g. button position)
-            const currentSettings = await getSettings(); 
-            showRedactionUI(target, currentSettings, () => handleRedaction(currentActiveElement));
-          }
-        }, 100);
-      }
-    }, true);
-
-    document.addEventListener('focusout', (event) => {
-      const relatedTarget = event.relatedTarget as HTMLElement | null;
-      if (!relatedTarget || !relatedTarget.closest('.airedactx-button-panel')) {
-        hideTimeoutId = window.setTimeout(() => {
-          hideRedactionUI();
-          currentActiveElement = null;
-        }, 50);
-      }
-    }, true);
-  }
+  document.addEventListener(
+    'focusout',
+    () => {
+      hideTimer = window.setTimeout(() => {
+        hideRedactionUI();
+        focused = null;
+      }, HIDE_DELAY_MS);
+    },
+    true,
+  );
 };
 
 init();

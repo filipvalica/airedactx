@@ -147,6 +147,9 @@
 </head>
 <body>
     <h1>AIRedactX Extension Test Page</h1>
+    <p>Every field holds the same sample. With the bundled rules it must read, after redaction:<br>
+    <code>[[Name]] has SSN [[SSN-1]] and can be reached at [[Email-1]] or call [[Phone-1]]. His credit card is [[Credit Card-1]] and IP address is [[IPv4-1]]. AWS key: [[AWS Access Key-1]]</code><br>
+    The card number passes the Luhn checksum on purpose; a number that fails it is left alone.</p>
     <div class="status info">
         <strong>Instructions:</strong> Enable "Use Anywhere Mode" in extension settings. Click into each field and look for the redaction button to appear. Each field contains sample PII data for testing.
     </div>
@@ -157,7 +160,7 @@
         
         <div class="field-label">1. Standard Textarea Element</div>
         <div class="field-description">Testing: &lt;textarea&gt;</div>
-        <textarea id="basic-textarea">John Doe has SSN 123-45-6789 and can be reached at john.doe@email.com or call 555-867-5309. His credit card is 4532-1488-0343-6467 and IP address is 192.168.1.100. AWS key: AKIAIOSFODNN7EXAMPLE</textarea>
+        <textarea id="basic-textarea">Captain Nemo has SSN 123-45-6789 and can be reached at nemo@nautilus.example or call 555-867-5309. His credit card is 4532-0151-1283-0366 and IP address is 192.168.1.100. AWS key: AKIAIOSFODNN7EXAMPLE</textarea>
     </div>
 
     <!-- LEVEL 2: ContentEditable Div (Basic) -->
@@ -166,7 +169,7 @@
         
         <div class="field-label">2. ContentEditable="true"</div>
         <div class="field-description">Testing: &lt;div contenteditable="true"&gt;</div>
-        <div class="contenteditable-div" contenteditable="true">John Doe has SSN 123-45-6789 and can be reached at john.doe@email.com or call 555-867-5309. His credit card is 4532-1488-0343-6467 and IP address is 192.168.1.100. AWS key: AKIAIOSFODNN7EXAMPLE</div>
+        <div class="contenteditable-div" contenteditable="true">Captain Nemo has SSN 123-45-6789 and can be reached at nemo@nautilus.example or call 555-867-5309. His credit card is 4532-0151-1283-0366 and IP address is 192.168.1.100. AWS key: AKIAIOSFODNN7EXAMPLE</div>
     </div>
 
     <!-- LEVEL 3: ContentEditable with Role -->
@@ -175,16 +178,16 @@
         
         <div class="field-label">3. Div with role="textbox"</div>
         <div class="field-description">Testing: &lt;div role="textbox" contenteditable="true"&gt;</div>
-        <div class="contenteditable-div" role="textbox" contenteditable="true">John Doe has SSN 123-45-6789 and can be reached at john.doe@email.com or call 555-867-5309. His credit card is 4532-1488-0343-6467 and IP address is 192.168.1.100. AWS key: AKIAIOSFODNN7EXAMPLE</div>
+        <div class="contenteditable-div" role="textbox" contenteditable="true">Captain Nemo has SSN 123-45-6789 and can be reached at nemo@nautilus.example or call 555-867-5309. His credit card is 4532-0151-1283-0366 and IP address is 192.168.1.100. AWS key: AKIAIOSFODNN7EXAMPLE</div>
     </div>
 
     <!-- LEVEL 4: Class Pattern Matching -->
     <div class="test-section">
-        <h2>Level 4: Class Pattern Detection</h2>
+        <h2>Level 4: Framework-style Class Names</h2>
         
-        <div class="field-label">4. Multiple Target Classes</div>
-        <div class="field-description">Testing: &lt;div class="editor composer message"&gt;</div>
-        <div class="contenteditable-div editor composer message" contenteditable="true">John Doe has SSN 123-45-6789 and can be reached at john.doe@email.com or call 555-867-5309. His credit card is 4532-1488-0343-6467 and IP address is 192.168.1.100. AWS key: AKIAIOSFODNN7EXAMPLE</div>
+        <div class="field-label">4. ContentEditable with editor class names</div>
+        <div class="field-description">Testing: &lt;div contenteditable class="editor composer message"&gt; (detection is by contenteditable, the classes are decoration)</div>
+        <div class="contenteditable-div editor composer message" contenteditable="true">Captain Nemo has SSN 123-45-6789 and can be reached at nemo@nautilus.example or call 555-867-5309. His credit card is 4532-0151-1283-0366 and IP address is 192.168.1.100. AWS key: AKIAIOSFODNN7EXAMPLE</div>
     </div>
 
     <!-- LEVEL 5: Modern Styled Textarea -->
@@ -194,7 +197,7 @@
         <div class="field-label">5. Custom Styled Textarea</div>
         <div class="field-description">Testing: &lt;textarea&gt; with modern CSS styling</div>
         <div class="modern-input-container">
-            <textarea class="modern-textarea">John Doe has SSN 123-45-6789 and can be reached at john.doe@email.com or call 555-867-5309. His credit card is 4532-1488-0343-6467 and IP address is 192.168.1.100. AWS key: AKIAIOSFODNN7EXAMPLE</textarea>
+            <textarea class="modern-textarea">Captain Nemo has SSN 123-45-6789 and can be reached at nemo@nautilus.example or call 555-867-5309. His credit card is 4532-0151-1283-0366 and IP address is 192.168.1.100. AWS key: AKIAIOSFODNN7EXAMPLE</textarea>
         </div>
     </div>
 
@@ -207,7 +210,7 @@
         <div class="chat-composer" 
              contenteditable="true" 
              role="textbox"
-             class="prompt">John Doe has SSN 123-45-6789 and can be reached at john.doe@email.com or call 555-867-5309. His credit card is 4532-1488-0343-6467 and IP address is 192.168.1.100. AWS key: AKIAIOSFODNN7EXAMPLE</div>
+             class="prompt">Captain Nemo has SSN 123-45-6789 and can be reached at nemo@nautilus.example or call 555-867-5309. His credit card is 4532-0151-1283-0366 and IP address is 192.168.1.100. AWS key: AKIAIOSFODNN7EXAMPLE</div>
     </div>
 
     <!-- LEVEL 7: Editor with Toolbar -->
@@ -220,7 +223,7 @@
             <div class="editor-toolbar">
                 [B] [I] [U] - Toolbar (non-functional)
             </div>
-            <div class="contenteditable-div editor" contenteditable="true" style="border:none; margin:0;">John Doe has SSN 123-45-6789 and can be reached at john.doe@email.com or call 555-867-5309. His credit card is 4532-1488-0343-6467 and IP address is 192.168.1.100. AWS key: AKIAIOSFODNN7EXAMPLE</div>
+            <div class="contenteditable-div editor" contenteditable="true" style="border:none; margin:0;">Captain Nemo has SSN 123-45-6789 and can be reached at nemo@nautilus.example or call 555-867-5309. His credit card is 4532-0151-1283-0366 and IP address is 192.168.1.100. AWS key: AKIAIOSFODNN7EXAMPLE</div>
         </div>
     </div>
 
@@ -247,14 +250,14 @@
                 <div class="contenteditable-div composer message editor prompt" 
                      contenteditable="true"
                      role="textbox"
-                     style="border:none; margin:0; min-height:120px;">John Doe has SSN 123-45-6789 and can be reached at john.doe@email.com or call 555-867-5309. His credit card is 4532-1488-0343-6467 and IP address is 192.168.1.100. AWS key: AKIAIOSFODNN7EXAMPLE</div>
+                     style="border:none; margin:0; min-height:120px;">Captain Nemo has SSN 123-45-6789 and can be reached at nemo@nautilus.example or call 555-867-5309. His credit card is 4532-0151-1283-0366 and IP address is 192.168.1.100. AWS key: AKIAIOSFODNN7EXAMPLE</div>
             </div>
         </div>
     </div>
 
     <script>
         // Sample text to use
-        const sampleText = "John Doe has SSN 123-45-6789 and can be reached at john.doe@email.com or call 555-867-5309. His credit card is 4532-1488-0343-6467 and IP address is 192.168.1.100. AWS key: AKIAIOSFODNN7EXAMPLE";
+        const sampleText = "Captain Nemo has SSN 123-45-6789 and can be reached at nemo@nautilus.example or call 555-867-5309. His credit card is 4532-0151-1283-0366 and IP address is 192.168.1.100. AWS key: AKIAIOSFODNN7EXAMPLE";
 
         // Create Shadow DOM component with textarea
         const shadowHost = document.getElementById('shadow-host');
@@ -316,9 +319,9 @@
 
         console.log('AIRedactX Test Page loaded. Sample text contains:');
         console.log('- SSN: 123-45-6789');
-        console.log('- Email: john.doe@email.com');
+        console.log('- Email: nemo@nautilus.example');
         console.log('- Phone: 555-867-5309');
-        console.log('- Credit Card: 4532-1488-0343-6467');
+        console.log('- Credit Card: 4532-0151-1283-0366');
         console.log('- IP: 192.168.1.100');
         console.log('- AWS Key: AKIAIOSFODNN7EXAMPLE');
     </script>

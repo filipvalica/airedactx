@@ -1,211 +1,55 @@
-# AIRedactX Enhanced Testing Guide
+# Release test: fresh Firefox profile
 
-## Overview
-This guide provides comprehensive testing instructions for the enhanced AIRedactX extension that now includes advanced text field detection capabilities for modern web applications.
+Five steps. Run them on a clean build (`npm ci && npm run build:firefox`, or the zip from `npm run package`) in a profile that has never had the extension. Each step has one pass condition. A fail on any step blocks the release.
 
-## Key Improvements Made
+The two Reset dialogs open with focus on Cancel, so Enter cancels; the import dialog defaults to Merge. Click the button you mean.
 
-### 1. Enhanced Element Detection
-- **Multiple Input Types**: Now detects `input[type="text"]`, `input[type="email"]`, `input[type="password"]`, `input[type="search"]`, `input[type="tel"]`, `input[type="url"]`
-- **ContentEditable Elements**: Improved detection of `contenteditable` divs and elements
-- **Role-Based Detection**: Detects elements with `role="textbox"` or `role="combobox"`
-- **Class Pattern Matching**: Identifies editable elements by common class patterns like `input`, `textbox`, `editor`, `composer`, `message`, `chat`, `prompt`, `query`, `search`, `form-control`
+**Setup.** `about:profiles` > Create a New Profile > Launch profile in new browser. In that window: `about:debugging` > This Firefox > Load Temporary Add-on > `dist/manifest.json` (or the zip). A temporary load shows no install prompt. Check that site access is on: `about:addons` > Extensions > AIRedactX > Permissions > "Access your data for all websites" must be enabled (switch it on if it is not; without it neither the button nor the context menu can run).
 
-### 2. Advanced Shadow DOM Support
-- **Recursive Shadow DOM Traversal**: Searches through nested Shadow DOMs
-- **Event Path Analysis**: Uses `event.composedPath()` to detect elements in Shadow DOM
-- **Cross-Component Detection**: Handles web components and custom elements
+## 1. Defaults are there
 
-### 3. Iframe Support
-- **Cross-Frame Detection**: Searches for editable elements within iframes
-- **Cross-Origin Handling**: Gracefully handles cross-origin iframe restrictions
+Click the toolbar icon. The options page opens in a tab.
 
-### 4. Dynamic Content Monitoring
-- **MutationObserver**: Monitors DOM changes for dynamically added elements
-- **Event Listener Attachment**: Automatically attaches listeners to new editable elements
-- **Real-Time Detection**: Detects elements as they're added to the page
+Pass: the Rules tab shows the bundled rules grouped under dividers (Personal, Secrets and tokens, Core identifiers, Financial, ...). The broad ones (SWIFT BIC, Routing Number, VIN, URL, Bearer Token) are switched off. Drag one rule to a different spot, then reload the tab: it stays where you put it.
 
-### 5. Improved Event Handling
-- **Multiple Event Types**: Listens to `focusin`, `focusout`, and `click` events
-- **Event Delegation**: Uses event delegation for better performance
-- **Framework Integration**: Triggers `input` events to notify JavaScript frameworks
+## 2. Local test page
 
-## Testing Instructions
+Open `airedactx_test.html` from the repo (File > Open File). Settings tab > switch on "Use Anywhere" mode. Click into the first textarea and paste these three lines:
 
-### Prerequisites
-1. Load the extension in your browser
-2. Enable "Use Anywhere Mode" in the extension settings
-3. Have some test redaction rules configured
-
-### Test Sites and Scenarios
-
-#### 1. ChatGPT (chat.openai.com)
-**Expected Behavior**: The redaction button should appear when you click into the message input area.
-
-**Test Steps**:
-1. Go to https://chat.openai.com
-2. Click into the message input area at the bottom
-3. Look for the "Redact" button appearing near the input field
-4. Type some text and click "Redact" to test redaction functionality
-
-**What to Look For**:
-- Button appears when focusing the input
-- Button disappears when clicking elsewhere
-- Redaction works on the text content
-
-#### 2. Google Search (google.com)
-**Expected Behavior**: The redaction button should appear when you click into the search box.
-
-**Test Steps**:
-1. Go to https://google.com
-2. Click into the search input field
-3. Look for the "Redact" button
-4. Test redaction functionality
-
-#### 3. Gmail (mail.google.com)
-**Expected Behavior**: The redaction button should appear when composing emails.
-
-**Test Steps**:
-1. Go to https://mail.google.com
-2. Click "Compose" to start a new email
-3. Click into the "To" field or message body
-4. Look for the redaction button
-
-#### 4. GitHub (github.com)
-**Expected Behavior**: The redaction button should appear in comment boxes and issue descriptions.
-
-**Test Steps**:
-1. Go to any GitHub repository
-2. Click "Issues" and create a new issue
-3. Click into the title or description fields
-4. Look for the redaction button
-
-#### 5. Twitter/X (x.com)
-**Expected Behavior**: The redaction button should appear in the tweet composer.
-
-**Test Steps**:
-1. Go to https://x.com
-2. Click into the "What's happening?" text area
-3. Look for the redaction button
-
-#### 6. Facebook (facebook.com)
-**Expected Behavior**: The redaction button should appear in post composer and comment fields.
-
-**Test Steps**:
-1. Go to https://facebook.com
-2. Click into the "What's on your mind?" area or any comment field
-3. Look for the redaction button
-
-### Testing Different Input Types
-
-#### Standard HTML Inputs
-Test these input types on any form:
-- `<input type="text">`
-- `<input type="email">`
-- `<input type="password">`
-- `<input type="search">`
-- `<input type="tel">`
-- `<input type="url">`
-- `<textarea>`
-
-#### ContentEditable Elements
-Test these patterns:
-- `<div contenteditable="true">`
-- `<div contenteditable="">`
-- Elements with `role="textbox"`
-- Elements with `role="combobox"`
-
-### Testing Shadow DOM Components
-
-#### Web Components
-Look for custom elements that might use Shadow DOM:
-- Custom input components
-- Rich text editors
-- Chat interfaces
-- Form builders
-
-#### Testing Steps
-1. Open browser developer tools
-2. Look for elements with `#shadow-root` in the DOM tree
-3. Try to interact with input fields within these components
-4. Verify the redaction button appears
-
-### Testing Dynamic Content
-
-#### Single Page Applications
-Test on SPAs that load content dynamically:
-1. Navigate to different sections of the app
-2. Look for new input fields that appear
-3. Verify the redaction button works on dynamically loaded fields
-
-#### AJAX-Loaded Forms
-1. Trigger actions that load new forms
-2. Test redaction on newly loaded input fields
-
-### Debugging Tips
-
-#### Enable Console Logging
-Open browser developer tools and look for these log messages:
-- "AIRedactX content script loaded."
-- "AIRedactX content script initialized with enhanced detection"
-- Any error messages related to element detection
-
-#### Check Element Detection
-In the console, you can test element detection:
-```javascript
-// This should return an array of detected editable elements
-console.log(document.querySelectorAll('[contenteditable], input, textarea'));
+```
+Hi, I'm Captain Nemo from Nautilus. Email nemo@nautilus.example or call (713) 555-0142.
+SSN 123-45-6789, card 4111 1111 1111 1111, order 1234 5678 9012 3456, token ghp_abcdefghijklmnopqrstuvwxyz0123456789.
+IMPORTANT: PLEASE REVIEW THE ATTACHED DOCUMENT.
 ```
 
-#### Verify Event Listeners
-Check if event listeners are properly attached:
-```javascript
-// Check if focusin events are being captured
-document.addEventListener('focusin', (e) => console.log('Focus detected:', e.target));
+Click the round button in the corner of the field.
+
+Pass: the field reads exactly
+
+```
+Hi, I'm [[Name]] from [[Company]]. Email [[Email-1]] or call [[Phone-1]].
+SSN [[SSN-1]], card [[Credit Card-1]], order 1234 5678 9012 3456, token [[GitHub Token-1]].
+IMPORTANT: PLEASE REVIEW THE ATTACHED DOCUMENT.
 ```
 
-### Common Issues and Solutions
+and turns pale yellow until you click into it again. The order number stays because it fails the card checksum. Settings tab > Highlight After Redaction > No highlight, redact a second time: no tint.
 
-#### Button Not Appearing
-1. Check if "Use Anywhere Mode" is enabled
-2. Verify the element is actually editable (not disabled/readonly)
-3. Check console for error messages
-4. Try clicking directly on the input field
+## 3. Real chat composer
 
-#### Button Appears But Redaction Doesn't Work
-1. Check if redaction rules are configured
-2. Verify the element type is supported
-3. Check console for redaction errors
+Switch "Use Anywhere" back off. Open claude.ai or chatgpt.com, sign in, click into the message box and paste the same three lines. Click the round button.
 
-#### Performance Issues
-1. Check if too many elements are being monitored
-2. Look for excessive DOM mutations
-3. Verify MutationObserver is working efficiently
+Pass: the placeholders from step 2 are in the box (blank-line spacing may differ, that is the editor's doing), the originals are gone, and the site's Send button is enabled. Send it: the reply quotes placeholders, not the originals. Use a throwaway chat if you mind the message being stored.
 
-### Reporting Issues
+If no button ever appears, recheck the site-access permission from Setup before calling it a fail.
 
-When reporting issues, please include:
-1. The website URL
-2. The specific input field that's not working
-3. Browser and version
-4. Console error messages
-5. Steps to reproduce
-6. Screenshots if helpful
+## 4. Context menu on a site that is not on the list
 
-### Success Criteria
+Open any page with a text field that is not in the allowed list (a GitHub issue comment box works). Type an email address, right-click inside the field, choose "Redact this field".
 
-The extension is working correctly if:
-1. Redaction buttons appear on most modern websites
-2. Buttons appear for different types of input fields
-3. Redaction functionality works as expected
-4. No console errors during normal operation
-5. Performance is acceptable (no noticeable lag)
+Pass: the address becomes `[[Email-1]]` even though the round button does not appear on this site.
 
-## Next Steps
+## 5. No network
 
-After testing, if issues are found:
-1. Document the specific problems
-2. Test on additional websites
-3. Refine the detection algorithms
-4. Add support for additional element types
-5. Optimize performance if needed
+`about:debugging` > This Firefox > AIRedactX > Inspect. That opens the extension's own devtools (background and options page). Open its Network tab, then on the options page export the rules, import that file back (pick Merge in the dialog), change a setting, and click "Reset Rules to Default" then "Replace my rules".
+
+Pass: the only request listed is `moz-extension://.../airedactx_rules.tsv` (from the reset). Nothing to any `http` or `https` address. The content script contains no network call at all, so there is nothing to watch on web pages.

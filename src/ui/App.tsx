@@ -1,236 +1,174 @@
 // src/ui/App.tsx
+// The options page shell: tabs, the rules state and every handler that changes it. Pure rule
+// logic lives in src/core; this file wires it to storage, the table and the dialogs.
 import React, { useState, useEffect, useRef } from 'react';
 import { Tabs, Tab } from './components/Tabs';
 import { SettingsPanel } from './components/Settings';
-import { RuleList } from './components/RuleList';
-import { AddRuleForm } from './components/AddRuleForm';
+import { RuleList, RuleEdit } from './components/RuleList';
+import { AddRuleForm, NewRule } from './components/AddRuleForm';
+import { Dialog, useDialog } from './components/Dialog';
 import { getRules, saveRules } from '../storage/storageManager';
+import { parseRulesTsv, serializeRulesTsv } from '../core/tsv';
+import { normalizePattern, patternError } from '../core/engine';
+import { applyImport, ImportMode, newRuleId } from '../core/ruleset';
 import { RedactionRule } from '../types';
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
-import { arrayMove, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+
+const UNDO_WINDOW_MS = 5000;
+
+/** Trigger a browser download of text content. */
+const downloadText = (filename: string, text: string, mimeType: string) => {
+  const url = URL.createObjectURL(new Blob([text], { type: mimeType }));
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+};
 
 function RulesPanel() {
   const [rules, setRules] = useState<RedactionRule[]>([]);
-  const [recentlyDeleted, setRecentlyDeleted] = useState<{rule: RedactionRule, index: number} | null>(null);
+  const [recentlyDeleted, setRecentlyDeleted] = useState<{ rule: RedactionRule; index: number } | null>(null);
   const [collapsedDividers, setCollapsedDividers] = useState<Set<string>>(new Set());
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const undoTimeoutRef = useRef<number | null>(null);
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+  const undoTimeoutRef = useRef<number | undefined>(undefined);
+  const dialog = useDialog();
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   useEffect(() => {
-    const loadRules = async () => setRules(await getRules());
-    loadRules();
-    return () => {
-      if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
-    };
+    void getRules().then(setRules);
+    return () => window.clearTimeout(undoTimeoutRef.current);
   }, []);
-  
-  const handleDragEnd = async (event: DragEndEvent) => {
+
+  /** Every change is persisted immediately; state and storage never drift apart. */
+  const commitRules = async (updated: RedactionRule[]) => {
+    setRules(updated);
+    await saveRules(updated);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (over && active.id !== over.id) {
-      const oldIndex = rules.findIndex((r) => r.id === active.id);
-      const newIndex = rules.findIndex((r) => r.id === over.id);
-      const updatedRules = arrayMove(rules, oldIndex, newIndex);
-      setRules(updatedRules);
-      await saveRules(updatedRules);
-    }
-  };
-  
-  const handleAddRule = async (newRule: Omit<RedactionRule, 'id' | 'enabled' | 'note'>) => {
-    if (newRule.type !== 'divider' && rules.some(rule => rule.find.trim() === newRule.find.trim())) {
-      alert(`Error: A rule with the match pattern "${newRule.find}" already exists.`);
-      return;
-    }
-    const ruleToAdd: RedactionRule = { ...newRule, id: `rule-${Date.now()}`, enabled: true };
-    const updatedRules = [...rules, ruleToAdd];
-    setRules(updatedRules);
-    await saveRules(updatedRules);
-  };
-  
-  const handleToggleRule = async (id: string) => {
-    const updatedRules = rules.map((rule) => (rule.id === id ? { ...rule, enabled: !rule.enabled } : rule));
-    setRules(updatedRules);
-    await saveRules(updatedRules);
+    if (!over || active.id === over.id) return;
+    const from = rules.findIndex((r) => r.id === active.id);
+    const to = rules.findIndex((r) => r.id === over.id);
+    void commitRules(arrayMove(rules, from, to));
   };
 
-  const handleUpdateRule = async (id: string, find: string, replace: string) => {
-    const updatedRules = rules.map(rule => 
-      rule.id === id ? { ...rule, find, replace } : rule
-    );
-    setRules(updatedRules);
-    await saveRules(updatedRules);
-  };
-  
-  const handleExportRules = () => {
-    const header = "type\tfind\treplace\tActive\tNote\n";
-    const tsvRows = rules.map(rule => {
-      const escape = (field: string = '') => field.replace(/\t/g, ' ').replace(/\n/g, ' ');
-      const active = rule.enabled ? 'Y' : 'N';
-      let note = rule.note || '';
-      if (rule.type === 'divider') {
-          note = rule.find;
-      }
-      return [escape(rule.type), escape(rule.find), escape(rule.replace), active, escape(note)].join('\t');
-    });
-    const BOM = '\uFEFF';
-    const tsvString = BOM + header + tsvRows.join('\n');
-    const blob = new Blob([tsvString], { type: 'text/tab-separated-values;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'airedactx_rules.tsv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-  
-  const handleFileSelected = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const text = e.target?.result as string;
-      try {
-        const importedRules = validateAndParseTSV(text);
-        handleImportedRules(importedRules);
-      } catch (e) {
-        // FIX: Cast 'e' to 'Error' to safely access the message property
-        alert(`Import failed: ${(e as Error).message}`);
-      }
-      if (fileInputRef.current) {
-        fileInputRef.current.value = "";
-      }
-    };
-    reader.readAsText(file);
+  /** Shared by Add and Edit: the pattern must compile and no other non-divider rule may use it. */
+  const duplicateError = (find: string, type: RedactionRule['type'], exceptId?: string): string | null => {
+    if (type === 'divider') return null;
+    const clash = rules.some((rule) => rule.id !== exceptId && rule.type !== 'divider' && rule.find === find);
+    return clash ? `A rule with the match pattern "${find}" already exists.` : null;
   };
 
-  const handleImportedRules = (importedRules: RedactionRule[]) => {
-    const importMode = window.prompt(`Found ${importedRules.length} rules. How would you like to import them?\n\nType 'REPLACE' to overwrite all existing rules.\nType 'MERGE' to add new rules and update existing ones.`, "MERGE");
-
-    if (importMode === null) return;
-
-    if (importMode.toUpperCase() === 'REPLACE') {
-        setRules(importedRules);
-        saveRules(importedRules);
-        alert("Rules replaced successfully!");
-    } else if (importMode.toUpperCase() === 'MERGE') {
-        const existingRulesByFind = new Map(rules.map(r => [r.find, r]));
-        let newRulesCount = 0;
-        let updatedRulesCount = 0;
-
-        importedRules.forEach(importedRule => {
-            if (importedRule.type !== 'divider' && existingRulesByFind.has(importedRule.find)) {
-                const existingRule = existingRulesByFind.get(importedRule.find)!;
-                Object.assign(existingRule, importedRule, { id: existingRule.id });
-                updatedRulesCount++;
-            } else {
-                const newId = `imported-${Date.now()}-${Math.random()}`;
-                existingRulesByFind.set(importedRule.find || newId, { ...importedRule, id: importedRule.id || newId });
-                newRulesCount++;
-            }
-        });
-        
-        const mergedRules = Array.from(existingRulesByFind.values());
-        setRules(mergedRules);
-        saveRules(mergedRules);
-        alert(`Merge complete: ${newRulesCount} new rules added, ${updatedRulesCount} existing rules updated.`);
-    } else {
-        alert("Invalid import option. Please type 'REPLACE' or 'MERGE'.");
-    }
+  const handleAddRule = (newRule: NewRule): string | null => {
+    const error = duplicateError(newRule.find, newRule.type);
+    if (error) return error;
+    void commitRules([...rules, { ...newRule, id: newRuleId(), enabled: true }]);
+    return null;
   };
-  
-  const validateAndParseTSV = (tsvText: string): RedactionRule[] => {
-    const allLines = tsvText.replace(/^\uFEFF/, '').trim().split(/\r?\n/);
-    if (allLines[0].startsWith('type\tfind')) allLines.shift();
 
-    const trimQuotes = (str: string = '') => str.trim().replace(/^"|"$/g, '');
+  const handleToggleRule = (id: string) =>
+    void commitRules(rules.map((rule) => (rule.id === id ? { ...rule, enabled: !rule.enabled } : rule)));
 
-    return allLines.map((line, index): RedactionRule | null => {
-      if (!line.trim() || line.startsWith('#')) return null;
-
-      const parts = line.split('\t');
-      const [type, find, replace, active, note] = parts;
-
-      if (!type) return null;
-      
-      const ruleType = type.trim() as 'literal' | 'regex' | 'divider';
-      if (!['literal', 'regex', 'divider'].includes(ruleType)) {
-        throw new Error(`Row ${index + 1}: Type must be 'literal', 'regex', or 'divider'.`);
-      }
-      
-      let findValue = trimQuotes(find);
-            
-      // Fix: Strip unsupported (?i) flag if present to prevent crash
-      if (ruleType === 'regex' && findValue.startsWith('(?i)')) {
-          findValue = findValue.substring(4);
-      }
-
-      if (ruleType === 'regex' && findValue) {
-        try { new RegExp(findValue); } 
-        catch (e) { throw new Error(`Row ${index + 1}: Invalid Regex pattern in '${findValue}': ${(e as Error).message}`); }
-      }
-
-      const newRule: RedactionRule = { 
-        id: `imported-rule-${Date.now()}-${index}`, 
-        type: ruleType, 
-        find: findValue, 
-        replace: trimQuotes(replace), 
-        enabled: active ? active.trim().toUpperCase() === 'Y' : true,
-        note: note ? note.trim().substring(0, 255) : undefined
-      };
-
-      if (newRule.type === 'divider') {
-        newRule.find = note || `Divider ${index + 1}`;
-        newRule.replace = '';
-      }
-      return newRule;
-    }).filter((rule): rule is RedactionRule => rule !== null);
+  const handleUpdateRule = (id: string, edit: RuleEdit): string | null => {
+    const existing = rules.find((rule) => rule.id === id);
+    if (!existing) return 'That rule no longer exists.';
+    const { find, caseInsensitive } = normalizePattern(existing.type, edit.find, edit.caseInsensitive);
+    const error = patternError(existing.type, find, caseInsensitive) ?? duplicateError(find, existing.type, id);
+    if (error) return error;
+    const updated: RedactionRule = { ...existing, find, replace: edit.replace.trim() };
+    if (caseInsensitive) updated.caseInsensitive = true;
+    else delete updated.caseInsensitive;
+    void commitRules(rules.map((rule) => (rule.id === id ? updated : rule)));
+    return null;
   };
 
   const handleDeleteRule = (id: string) => {
-    const ruleIndex = rules.findIndex(rule => rule.id === id);
-    if (ruleIndex === -1) return;
-    const ruleToDelete = rules[ruleIndex];
-    setRecentlyDeleted({ rule: ruleToDelete, index: ruleIndex });
-    const updatedRules = rules.filter(rule => rule.id !== id);
-    setRules(updatedRules);
-    if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
-    undoTimeoutRef.current = window.setTimeout(async () => {
-      await saveRules(updatedRules);
-      setRecentlyDeleted(null);
-    }, 5000);
+    const index = rules.findIndex((rule) => rule.id === id);
+    if (index === -1) return;
+    setRecentlyDeleted({ rule: rules[index], index });
+    void commitRules(rules.filter((rule) => rule.id !== id));
+    window.clearTimeout(undoTimeoutRef.current);
+    undoTimeoutRef.current = window.setTimeout(() => setRecentlyDeleted(null), UNDO_WINDOW_MS);
   };
 
   const handleUndoDelete = () => {
-    if (recentlyDeleted) {
-      const newRules = [...rules];
-      newRules.splice(recentlyDeleted.index, 0, recentlyDeleted.rule);
-      setRules(newRules);
-      setRecentlyDeleted(null);
-      if (undoTimeoutRef.current) clearTimeout(undoTimeoutRef.current);
+    if (!recentlyDeleted) return;
+    const restored = [...rules];
+    restored.splice(Math.min(recentlyDeleted.index, restored.length), 0, recentlyDeleted.rule);
+    void commitRules(restored);
+    setRecentlyDeleted(null);
+    window.clearTimeout(undoTimeoutRef.current);
+  };
+
+  const handleExportRules = () => {
+    downloadText('airedactx_rules.tsv', serializeRulesTsv(rules), 'text/tab-separated-values;charset=utf-8');
+  };
+
+  const handleFileSelected = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    try {
+      const imported = parseRulesTsv(await file.text());
+      dialog.show({
+        title: 'Import rules',
+        message:
+          `Found ${imported.length} rules in ${file.name}.\n\n` +
+          'Merge adds the new rules and updates existing ones that have the same match pattern. ' +
+          'Replace discards every current rule first.',
+        buttons: [
+          { label: 'Cancel' },
+          { label: 'Replace', kind: 'danger', onClick: () => finishImport(imported, 'replace') },
+          { label: 'Merge', kind: 'primary', onClick: () => finishImport(imported, 'merge') },
+        ],
+      });
+    } catch (error) {
+      dialog.notify('Import failed', (error as Error).message);
     }
   };
-  
+
+  const finishImport = (imported: RedactionRule[], mode: ImportMode) => {
+    const { rules: next, added, updated } = applyImport(rules, imported, mode);
+    void commitRules(next);
+    dialog.notify(
+      'Import complete',
+      mode === 'replace' ? `Replaced with ${added} rules.` : `${added} added, ${updated} updated.`,
+    );
+  };
+
   const handleToggleDivider = (dividerId: string) => {
-      setCollapsedDividers(prev => {
-          const newSet = new Set(prev);
-          if (newSet.has(dividerId)) {
-              newSet.delete(dividerId);
-          } else {
-              newSet.add(dividerId);
-          }
-          return newSet;
-      });
+    setCollapsedDividers((prev) => {
+      const next = new Set(prev);
+      if (next.has(dividerId)) next.delete(dividerId);
+      else next.add(dividerId);
+      return next;
+    });
   };
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <section className="panel-container">
         <h4 className="panel-heading">Import / Export Rules</h4>
-        <p className="panel-description">
-          Save or load your ruleset using a TSV file.
-        </p>
+        <p className="panel-description">Save or load your ruleset as a TSV file (opens in Excel or Google Sheets).</p>
         <div className="data-management">
           <button onClick={() => fileInputRef.current?.click()}>Import from TSV</button>
           <button onClick={handleExportRules}>Export to TSV</button>
@@ -240,7 +178,14 @@ function RulesPanel() {
         <h4 className="panel-heading">Add Rule</h4>
         <AddRuleForm onAddRule={handleAddRule} />
       </section>
-      <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".tsv,text/tab-separated-values" onChange={handleFileSelected} />
+      <input
+        type="file"
+        ref={fileInputRef}
+        style={{ display: 'none' }}
+        accept=".tsv,text/tab-separated-values"
+        onChange={handleFileSelected}
+      />
+      <Dialog state={dialog.state} onClose={dialog.close} />
       {recentlyDeleted && (
         <div className="undo-snackbar" role="alert">
           <span>Rule deleted.</span>
@@ -250,20 +195,22 @@ function RulesPanel() {
       <section className="panel-container">
         <h4 className="panel-heading">All Rules</h4>
         <p className="panel-description">
-          Rules are applied top-to-bottom. Drag to reorder priority.
+          Literal rules run first, then regex rules, each top to bottom. Drag to reorder.
         </p>
         {rules.length > 0 ? (
-          <SortableContext items={rules.map(r => r.id)} strategy={verticalListSortingStrategy}>
-            <RuleList 
-              rules={rules} 
-              onDelete={handleDeleteRule} 
+          <SortableContext items={rules.map((r) => r.id)} strategy={verticalListSortingStrategy}>
+            <RuleList
+              rules={rules}
+              onDelete={handleDeleteRule}
               onToggle={handleToggleRule}
               onUpdate={handleUpdateRule}
               collapsedDividers={collapsedDividers}
               toggleDivider={handleToggleDivider}
             />
           </SortableContext>
-        ) : <p className="no-rules-message">No rules defined.</p>}
+        ) : (
+          <p className="no-rules-message">No rules defined. Import a TSV or use Settings to restore the defaults.</p>
+        )}
       </section>
     </DndContext>
   );
@@ -272,11 +219,17 @@ function RulesPanel() {
 function App() {
   return (
     <div className="app-container">
-      <header><h1>AIRedactX</h1></header>
+      <header>
+        <h1>AIRedactX</h1>
+      </header>
       <main role="main">
         <Tabs>
-          <Tab label="Rules"><RulesPanel /></Tab>
-          <Tab label="Settings"><SettingsPanel /></Tab>
+          <Tab label="Rules">
+            <RulesPanel />
+          </Tab>
+          <Tab label="Settings">
+            <SettingsPanel />
+          </Tab>
         </Tabs>
       </main>
     </div>
